@@ -1,6 +1,7 @@
 import playerIcon from "@/assets/player-icon.png.asset.json";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { LANDMARKS, CAMPUS_CENTER, CAMPUS_BOUNDS, ACHIEVEMENTS, newlyEarned, DISCOVER_RADIUS_M, CATEGORY_META, CATEGORY_ORDER, type Category } from "@/lib/landmarks";
+import { rollLoot, type Rarity } from "@/lib/loot";
 import { describeLandmark } from "@/lib/discover.functions";
 import { Z, project, unproject, distM, clampToCampus } from "@/lib/geo";
 
@@ -43,7 +44,9 @@ function tile(z: number, tx: number, ty: number, onload: () => void) {
   return img.complete && img.naturalWidth ? img : null;
 }
 
-type Saved = { cells: string[]; found: Record<string, string>; achv?: number[] };
+type Saved = { cells: string[]; found: Record<string, string>; achv?: number[]; loot?: LootItem[] };
+type LootItem = { name: string; emoji: string; rarity: Rarity; from: string };
+const RARITY_CLASS: Record<Rarity, string> = { common: "text-parchment", rare: "text-badge-safety", epic: "text-badge-eco", legendary: "text-gold" };
 
 const playerImg: HTMLImageElement = typeof Image !== "undefined" ? Object.assign(new Image(), { src: playerIcon.url }) : ({} as HTMLImageElement);
 
@@ -149,19 +152,21 @@ export function ExplorerMap() {
       el.removeEventListener("pointercancel", onUp);
     };
   }, []);
+  const [loot, setLoot] = useState<LootItem[]>([]);
+  const [chest, setChest] = useState<{ item: LootItem; open: boolean } | null>(null);
   const loaded = useRef(false);
 
   useEffect(() => {
     try {
       const s: Saved = JSON.parse(localStorage.getItem(STORE) || "null");
-      if (s) { setCells(new Set(s.cells)); setFound(s.found); setAchv(s.achv ?? []); }
+      if (s) { setCells(new Set(s.cells)); setFound(s.found); setAchv(s.achv ?? []); setLoot(s.loot ?? []); }
     } catch { /* ignore */ }
     loaded.current = true;
   }, []);
   useEffect(() => {
     if (!loaded.current) return;
-    localStorage.setItem(STORE, JSON.stringify({ cells: [...cells], found, achv }));
-  }, [cells, found, achv]);
+    localStorage.setItem(STORE, JSON.stringify({ cells: [...cells], found, achv, loot }));
+  }, [cells, found, achv, loot]);
 
   const pct = explorePct(cells);
   useEffect(() => {
@@ -250,6 +255,9 @@ export function ExplorerMap() {
         // Curated facts (safety / eco / essentials) show instantly; Claude adds the rest.
         const seed = lm.fact ?? "";
         setFound((f) => ({ ...f, [lm.id]: seed }));
+        const item = { ...rollLoot(), from: lm.name };
+        setLoot((l) => [...l, item]);
+        setChest({ item, open: false });
         setDisc({ name: lm.name, emoji: CATEGORY_META[lm.category].emoji, cssVar: CATEGORY_META[lm.category].cssVar });
         if (discTimer.current) clearTimeout(discTimer.current);
         discTimer.current = setTimeout(() => setDisc(null), 3500);
@@ -548,6 +556,26 @@ export function ExplorerMap() {
         <button className="mc-btn h-10 w-10 text-base sm:h-12 sm:w-12" aria-label={mode === "gps" ? "Switch to demo walk" : "Use my location"} title={mode === "gps" ? "Demo walk" : "Use my location"} onClick={() => setMode(mode === "gps" ? "demo" : "gps")}>{mode === "gps" ? "🚶" : "📍"}</button>
       </div>
 
+      {chest && (
+        <div className="absolute inset-0 z-50 grid place-items-center bg-ink/60 p-6">
+          <div className="slot-panel flex w-full max-w-xs flex-col items-center gap-3 p-4 text-center">
+            <p className="font-pixel text-[9px] text-gold">Loot chest found!</p>
+            <p className="font-pixel text-[8px] leading-4 text-parchment/70">{chest.item.from}</p>
+            {chest.open ? (
+              <>
+                <div className="text-5xl animate-in zoom-in duration-300">{chest.item.emoji}</div>
+                <p className={`font-pixel text-[10px] uppercase ${RARITY_CLASS[chest.item.rarity]}`}>{chest.item.rarity}</p>
+                <p className="font-pixel text-[10px] text-parchment">{chest.item.name}</p>
+                <button onClick={() => setChest(null)} className="mc-btn min-h-10 px-4 font-pixel text-[9px]">Collect</button>
+              </>
+            ) : (
+              <button onClick={() => setChest((c) => c && { ...c, open: true })} aria-label="Open chest" className="text-6xl animate-bounce">🧰</button>
+            )}
+            {!chest.open && <p className="font-pixel text-[8px] text-parchment/70">Tap to open</p>}
+          </div>
+        </div>
+      )}
+
       {disc && (
         <button
           onClick={() => setDisc(null)}
@@ -583,7 +611,7 @@ export function ExplorerMap() {
             className="mc-btn min-h-9 px-2.5 py-1.5 font-pixel text-[9px] sm:text-[10px]"
           >{showAll ? "Hide map" : "Reveal map"}</button>
           <button
-            onClick={() => { if (confirm("Erase your explored map?")) { setCells(new Set()); setFound({}); setAchv([]); } }}
+            onClick={() => { if (confirm("Erase your explored map?")) { setCells(new Set()); setFound({}); setAchv([]); setLoot([]); } }}
             className="mc-btn min-h-9 px-2.5 py-1.5 font-pixel text-[9px] sm:text-[10px]"
           >Reset map</button>
         </div>
@@ -648,6 +676,16 @@ export function ExplorerMap() {
               })()
             ) : (
             <>
+              <div className="mb-2">
+                <p className="mb-1 font-pixel text-[9px] text-gold">🧰 Loot ({loot.length})</p>
+                {loot.length ? (
+                  <div className="flex flex-wrap gap-1">
+                    {loot.map((it, n) => (
+                      <span key={n} title={`${it.name} (${it.rarity}) — ${it.from}`} className={`slot-panel px-1.5 py-1 font-pixel text-[8px] ${RARITY_CLASS[it.rarity]}`}>{it.emoji} {it.name}</span>
+                    ))}
+                  </div>
+                ) : <p className="font-pixel text-[8px] leading-4 text-parchment/60">Discover landmarks to open loot chests.</p>}
+              </div>
             {/* category legend: colour-coded pixel badges */}
             <div className="flex flex-col gap-2">
               {CATEGORY_ORDER.map((c) => {
