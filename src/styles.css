@@ -150,7 +150,7 @@
   }
 }
 /* Phones: the map fills the screen height, so use the taller parchment cut. */
-@media (max-width: 639px) {
+@media (max-aspect-ratio: 4/5) {
   .map-frame {
     -webkit-mask-image: url("/map-frame-tall.png");
     mask-image: url("/map-frame-tall.png");
@@ -187,12 +187,7 @@
   box-shadow: inset 2px 2px 0 oklch(0.78 0.01 60 / 0.55), inset -2px -2px 0 oklch(0 0 0 / 0.5), 4px 4px 0 oklch(0 0 0 / 0.3);
 }
 @utility mc-world {
-  background-color: oklch(0.55 0.12 80);
-  background-image: url(/mc-sunset.gif);
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  image-rendering: pixelated;
+  background-color: var(--charcoal);
 }
 @utility map-held {
   transform: none;

@@ -387,10 +387,21 @@ export function ExplorerMap() {
 
   const count = Object.keys(found).length;
   return (
-    <div className={`mc-world flex h-[100dvh] flex-col items-center justify-start gap-1.5 overflow-hidden px-0 pb-2 pt-1.5 transition-[padding] duration-300 ease-out sm:justify-center sm:gap-4 sm:p-6 ${drawer ? "sm:pl-80" : ""}`}>
-      <header className="flex w-full max-w-[420px] items-center gap-2 px-1 sm:max-w-[520px]">
-        <h1 className="min-w-0 truncate font-pixel text-[10px] text-foreground text-shadow-block sm:text-lg">USF Explorer Map</h1>
-        <div className="ml-auto shrink-0 font-pixel text-[8px] text-foreground text-shadow-block sm:text-xs">🗺 {pct.toFixed(0)}% • ⛏ {count}/{LANDMARKS.length}</div>
+    <div className="mc-world relative h-[100dvh] w-full overflow-hidden">
+      {/* full-screen map inside the torn paper border */}
+      <div className="map-frame absolute inset-0">
+        <canvas ref={canvasRef} className="h-full w-full touch-none" aria-label="Explored campus map" />
+        {!pos && (
+          <div className="absolute inset-0 grid place-items-center px-[18%] text-center font-pixel text-xs leading-relaxed text-ink">
+            {gpsMsg}
+          </div>
+        )}
+      </div>
+
+      {/* floating top bar, Google Maps style */}
+      <header className={`slot-panel absolute left-1/2 top-[max(3%,14px)] z-30 flex w-[min(86vw,560px)] -translate-x-1/2 items-center gap-2 px-3 py-2 transition-[margin] duration-300 ${drawer ? "sm:ml-36" : ""}`}>
+        <h1 className="min-w-0 truncate font-pixel text-[10px] text-parchment text-shadow-block sm:text-sm">USF Explorer Map</h1>
+        <div className="ml-auto shrink-0 font-pixel text-[8px] text-gold sm:text-[10px]">🗺 {pct.toFixed(0)}% • ⛏ {count}/{LANDMARKS.length}</div>
         <div className="flex shrink-0 gap-1.5 sm:hidden">
           <button onClick={() => setDrawer((d) => (d === "progress" ? null : "progress"))} aria-label="Toggle progress panel" className="mc-btn min-h-8 px-2 py-1 font-pixel text-[9px]">🏆</button>
           <button onClick={() => setDrawer((d) => (d === "info" ? null : "info"))} aria-label="Toggle campus info panel" className="mc-btn min-h-8 px-2 py-1 font-pixel text-[9px]">📖</button>
@@ -398,29 +409,23 @@ export function ExplorerMap() {
       </header>
 
       {pos && gpsMsg && mode === "gps" && (
-        <div className="max-w-[94vw] bg-ink px-2 py-1 text-center font-pixel text-[9px] leading-relaxed text-parchment sm:max-w-[520px]">
+        <div className="absolute left-1/2 top-[calc(max(3%,14px)+52px)] z-30 w-[min(80vw,520px)] -translate-x-1/2 bg-ink px-2 py-1 text-center font-pixel text-[9px] leading-relaxed text-parchment">
           {gpsMsg}
         </div>
       )}
 
-      <div className="map-frame map-held relative min-h-0 w-[94vw] max-w-[420px] flex-1 sm:aspect-square sm:h-auto sm:w-[92vw] sm:max-w-[520px] sm:flex-none">
-        <canvas ref={canvasRef} className="h-full w-full touch-none" aria-label="Explored campus map" />
-        {!pos && (
-          <div className="absolute inset-0 grid place-items-center p-6 text-center font-pixel text-xs text-ink">
-            {gpsMsg}
-          </div>
-        )}
-        <div className="absolute right-[16%] top-[9%] z-20 flex flex-col gap-1.5">
-          <button className="mc-btn h-8 w-8 font-pixel text-sm sm:h-12 sm:w-12 sm:text-base" aria-label="Zoom in" onClick={() => setZoom((z) => clampZoom(z * 1.5))}>+</button>
-          <button className="mc-btn h-8 w-8 font-pixel text-sm sm:h-12 sm:w-12 sm:text-base" aria-label="Zoom out" onClick={() => setZoom((z) => clampZoom(z / 1.5))}>−</button>
-        </div>
+      {/* floating zoom + locate, right side */}
+      <div className="absolute bottom-[max(9%,64px)] right-[max(7%,22px)] z-30 flex flex-col gap-1.5">
+        <button className="mc-btn h-10 w-10 font-pixel text-sm sm:h-12 sm:w-12" aria-label="Zoom in" onClick={() => setZoom((z) => clampZoom(z * 1.5))}>+</button>
+        <button className="mc-btn h-10 w-10 font-pixel text-sm sm:h-12 sm:w-12" aria-label="Zoom out" onClick={() => setZoom((z) => clampZoom(z / 1.5))}>−</button>
+        <button className="mc-btn h-10 w-10 text-base sm:h-12 sm:w-12" aria-label={mode === "gps" ? "Switch to demo walk" : "Use my location"} title={mode === "gps" ? "Demo walk" : "Use my location"} onClick={() => setMode(mode === "gps" ? "demo" : "gps")}>{mode === "gps" ? "🚶" : "📍"}</button>
       </div>
 
       {disc && (
         <button
           onClick={() => setDisc(null)}
           aria-label="Dismiss advancement"
-          className="advancement-toast fixed right-4 top-4 z-50 flex max-w-[70vw] items-center gap-3 px-3 py-2 text-left animate-in fade-in slide-in-from-right-8 duration-300"
+          className="advancement-toast fixed right-4 top-20 z-50 flex max-w-[70vw] items-center gap-3 px-3 py-2 text-left animate-in fade-in slide-in-from-right-8 duration-300"
         >
           <span
             className="grid h-10 w-10 shrink-0 place-items-center border-2 border-ink text-xl"
@@ -435,26 +440,24 @@ export function ExplorerMap() {
         </button>
       )}
 
-      <div className="flex w-full max-w-[420px] flex-col items-center gap-1.5">
+      {/* floating bottom controls */}
+      <div className="absolute bottom-[max(5%,26px)] left-[max(7%,22px)] z-30 flex flex-col items-start gap-1.5">
         {mode === "demo" && (
-          <div className="grid grid-cols-3 gap-1.5">
-            <span /><button className="mc-btn h-11 w-11 text-lg sm:h-14 sm:w-14 sm:text-xl" onClick={() => step(0, -1)} aria-label="North">▲</button><span />
-            <button className="mc-btn h-11 w-11 text-lg sm:h-14 sm:w-14 sm:text-xl" onClick={() => step(-1, 0)} aria-label="West">◀</button>
-            <button className="mc-btn h-11 w-11 text-lg sm:h-14 sm:w-14 sm:text-xl" onClick={() => step(0, 1)} aria-label="South">▼</button>
-            <button className="mc-btn h-11 w-11 text-lg sm:h-14 sm:w-14 sm:text-xl" onClick={() => step(1, 0)} aria-label="East">▶</button>
+          <div className="grid grid-cols-3 gap-1">
+            <span /><button className="mc-btn h-10 w-10 text-base sm:h-12 sm:w-12" onClick={() => step(0, -1)} aria-label="North">▲</button><span />
+            <button className="mc-btn h-10 w-10 text-base sm:h-12 sm:w-12" onClick={() => step(-1, 0)} aria-label="West">◀</button>
+            <button className="mc-btn h-10 w-10 text-base sm:h-12 sm:w-12" onClick={() => step(0, 1)} aria-label="South">▼</button>
+            <button className="mc-btn h-10 w-10 text-base sm:h-12 sm:w-12" onClick={() => step(1, 0)} aria-label="East">▶</button>
           </div>
         )}
-        <div className="flex flex-wrap items-center justify-center gap-1.5">
-          <button onClick={() => setMode(mode === "gps" ? "demo" : "gps")} className="mc-btn min-h-9 px-2.5 py-1.5 font-pixel text-[9px] sm:px-4 sm:py-2 sm:text-[10px]">
-            {mode === "gps" ? "Demo walk" : "Use my location"}
-          </button>
+        <div className="flex gap-1.5">
           <button
             onClick={() => setShowAll((s) => !s)}
-            className="mc-btn min-h-9 px-2.5 py-1.5 font-pixel text-[9px] sm:px-4 sm:py-2 sm:text-[10px]"
+            className="mc-btn min-h-9 px-2.5 py-1.5 font-pixel text-[9px] sm:text-[10px]"
           >{showAll ? "Hide map" : "Reveal map"}</button>
           <button
             onClick={() => { if (confirm("Erase your explored map?")) { setCells(new Set()); setFound({}); setAchv([]); } }}
-            className="mc-btn min-h-9 px-2.5 py-1.5 font-pixel text-[9px] sm:px-4 sm:py-2 sm:text-[10px]"
+            className="mc-btn min-h-9 px-2.5 py-1.5 font-pixel text-[9px] sm:text-[10px]"
           >Reset map</button>
         </div>
       </div>
