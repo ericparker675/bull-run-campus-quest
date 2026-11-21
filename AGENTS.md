@@ -28,3 +28,6 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+# Agents
+- Explored map state lives in browser localStorage (no backend) — keeps the app simple and private per device.
+- Claude building facts come from a server function in src/lib/discover.functions.ts via the AI gateway — keeps the key server-side.
