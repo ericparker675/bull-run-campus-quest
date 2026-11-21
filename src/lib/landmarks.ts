@@ -9,6 +9,8 @@ export type Landmark = {
   category: Category;
   /** Curated fact shown the moment the landmark is discovered. */
   fact?: string;
+  /** True for actual buildings — only these drop loot chests. */
+  building?: boolean;
 };
 
 export const CATEGORY_META: Record<Category, { label: string; emoji: string; cssVar: string }> = {
@@ -61,10 +63,12 @@ export const LANDMARKS: Landmark[] = [
   // ⭐ Campus Essentials — Best Overall (gold pixel badges)
   {
     id: "lib", code: "LIB", name: "USF Tampa Library", lat: 28.05955, lng: -82.41226, category: "essentials",
+    building: true,
     fact: "24/5 study floors, free laptop and charger tech lending, and tutoring.",
   },
   {
     id: "msc", code: "MSC", name: "Marshall Student Center (MSC)", lat: 28.06405, lng: -82.41345, category: "essentials",
+    building: true,
     fact: "Dining, the Bull Market, the Feed-A-Bull food pantry, and student orgs.",
   },
   {
@@ -73,24 +77,25 @@ export const LANDMARKS: Landmark[] = [
   },
   {
     id: "rec", code: "REC", name: "Campus Recreation Center", lat: 28.06055, lng: -82.40735, category: "essentials",
+    building: true,
     fact: "Free student gym, wellness center, and outdoor pool.",
   },
 
   // 🧱 Other major campus buildings (stone pixel badges)
-  { id: "isa", code: "ISA", name: "Interdisciplinary Sciences", lat: 28.06135, lng: -82.41425, category: "campus" },
-  { id: "eng", code: "ENG", name: "Engineering Building", lat: 28.05875, lng: -82.41525, category: "campus" },
-  { id: "bsn", code: "BSN", name: "Muma College of Business", lat: 28.05835, lng: -82.41055, category: "campus" },
-  { id: "cpr", code: "CPR", name: "Cooper Hall", lat: 28.05965, lng: -82.41085, category: "campus" },
-  { id: "sun", code: "SUN", name: "Yuengling Center", lat: 28.05925, lng: -82.40685, category: "campus" },
-  { id: "che", code: "CHE", name: "Chemistry Building", lat: 28.06155, lng: -82.41615, category: "campus" },
-  { id: "svc", code: "SVC", name: "Student Services Building", lat: 28.06175, lng: -82.41205, category: "campus" },
+  { id: "isa", code: "ISA", name: "Interdisciplinary Sciences", lat: 28.06135, lng: -82.41425, category: "campus", building: true },
+  { id: "eng", code: "ENG", name: "Engineering Building", lat: 28.05875, lng: -82.41525, category: "campus", building: true },
+  { id: "bsn", code: "BSN", name: "Muma College of Business", lat: 28.05835, lng: -82.41055, category: "campus", building: true },
+  { id: "cpr", code: "CPR", name: "Cooper Hall", lat: 28.05965, lng: -82.41085, category: "campus", building: true },
+  { id: "sun", code: "SUN", name: "Yuengling Center", lat: 28.05925, lng: -82.40685, category: "campus", building: true },
+  { id: "che", code: "CHE", name: "Chemistry Building", lat: 28.06155, lng: -82.41615, category: "campus", building: true },
+  { id: "svc", code: "SVC", name: "Student Services Building", lat: 28.06175, lng: -82.41205, category: "campus", building: true },
   // 🧱 Edge landmarks — spread out toward the corners of the map
-  { id: "mcc", code: "MCC", name: "Moffitt Cancer Center", lat: 28.06470, lng: -82.42330, category: "campus" },
-  { id: "cam", code: "CAM", name: "USF Contemporary Art Museum", lat: 28.05960, lng: -82.42050, category: "campus" },
-  { id: "mdc", code: "MDC", name: "Morsani College of Medicine", lat: 28.06620, lng: -82.41480, category: "campus" },
+  { id: "mcc", code: "MCC", name: "Moffitt Cancer Center", lat: 28.06470, lng: -82.42330, category: "campus", building: true },
+  { id: "cam", code: "CAM", name: "USF Contemporary Art Museum", lat: 28.05960, lng: -82.42050, category: "campus", building: true },
+  { id: "mdc", code: "MDC", name: "Morsani College of Medicine", lat: 28.06620, lng: -82.41480, category: "campus", building: true },
   { id: "rfl", code: "RFL", name: "Sycamore Recreation Fields", lat: 28.05630, lng: -82.40650, category: "campus" },
-  { id: "soc", code: "SOC", name: "Corbett Soccer Stadium", lat: 28.05720, lng: -82.40320, category: "campus" },
-  { id: "alm", code: "ALM", name: "USF Alumni Center", lat: 28.06580, lng: -82.40520, category: "campus" },
+  { id: "soc", code: "SOC", name: "Corbett Soccer Stadium", lat: 28.05720, lng: -82.40320, category: "campus", building: true },
+  { id: "alm", code: "ALM", name: "USF Alumni Center", lat: 28.06580, lng: -82.40520, category: "campus", building: true },
 ];
 
 export const CAMPUS_CENTER = { lat: 28.0605, lng: -82.4125 };
@@ -112,4 +117,9 @@ export const ACHIEVEMENTS = [
 /** Achievements newly earned when exploration goes from `before`% to `after`%. */
 export function newlyEarned(before: number, after: number) {
   return ACHIEVEMENTS.filter((a) => before < a.pct && after >= a.pct);
+}
+
+/** Loot chests only drop from actual buildings — not towers, stations, trails, plazas or fields. */
+export function dropsLoot(lm: Landmark) {
+  return lm.building === true;
 }

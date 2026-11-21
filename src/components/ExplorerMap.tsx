@@ -1,6 +1,6 @@
 import playerIcon from "@/assets/player-icon.png.asset.json";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { LANDMARKS, CAMPUS_CENTER, CAMPUS_BOUNDS, ACHIEVEMENTS, newlyEarned, DISCOVER_RADIUS_M, CATEGORY_META, CATEGORY_ORDER, type Category } from "@/lib/landmarks";
+import { LANDMARKS, CAMPUS_CENTER, CAMPUS_BOUNDS, ACHIEVEMENTS, newlyEarned, dropsLoot, DISCOVER_RADIUS_M, CATEGORY_META, CATEGORY_ORDER, type Category } from "@/lib/landmarks";
 import { rollLoot, type Rarity } from "@/lib/loot";
 import { describeLandmark } from "@/lib/discover.functions";
 import { Z, project, unproject, distM, clampToCampus } from "@/lib/geo";
@@ -255,9 +255,12 @@ export function ExplorerMap() {
         // Curated facts (safety / eco / essentials) show instantly; Claude adds the rest.
         const seed = lm.fact ?? "";
         setFound((f) => ({ ...f, [lm.id]: seed }));
-        const item = { ...rollLoot(), from: lm.name };
-        setLoot((l) => [...l, item]);
-        setChest({ item, open: false });
+        // Only buildings drop loot chests.
+        if (dropsLoot(lm)) {
+          const item = { ...rollLoot(), from: lm.name };
+          setLoot((l) => [...l, item]);
+          setChest({ item, open: false });
+        }
         setDisc({ name: lm.name, emoji: CATEGORY_META[lm.category].emoji, cssVar: CATEGORY_META[lm.category].cssVar });
         if (discTimer.current) clearTimeout(discTimer.current);
         discTimer.current = setTimeout(() => setDisc(null), 3500);
@@ -684,7 +687,7 @@ export function ExplorerMap() {
                       <span key={n} title={`${it.name} (${it.rarity}) — ${it.from}`} className={`slot-panel px-1.5 py-1 font-pixel text-[8px] ${RARITY_CLASS[it.rarity]}`}>{it.emoji} {it.name}</span>
                     ))}
                   </div>
-                ) : <p className="font-pixel text-[8px] leading-4 text-parchment/60">Discover landmarks to open loot chests.</p>}
+                ) : <p className="font-pixel text-[8px] leading-4 text-parchment/60">Discover buildings to open loot chests.</p>}
               </div>
             {/* category legend: colour-coded pixel badges */}
             <div className="flex flex-col gap-2">

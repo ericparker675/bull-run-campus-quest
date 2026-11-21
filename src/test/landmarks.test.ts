@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { LANDMARKS, CAMPUS_BOUNDS, CATEGORY_ORDER, DISCOVER_RADIUS_M } from "@/lib/landmarks";
+import { LANDMARKS, CAMPUS_BOUNDS, CATEGORY_ORDER, DISCOVER_RADIUS_M, dropsLoot } from "@/lib/landmarks";
 import { distM } from "@/lib/geo";
 
 const inBounds = (l: { lat: number; lng: number }) =>
@@ -37,5 +37,15 @@ describe("track-relevant landmarks", () => {
   it("labels every category used by the map", () => {
     const used = [...new Set(LANDMARKS.map((l) => l.category))];
     expect(used.every((c) => CATEGORY_ORDER.includes(c))).toBe(true);
+  });
+
+  it("drops loot chests only from buildings", () => {
+    expect(LANDMARKS.filter(dropsLoot).map((l) => l.code).sort()).toEqual(
+      ["ALM", "BSN", "CAM", "CHE", "CPR", "ENG", "ISA", "LIB", "MCC", "MDC", "MSC", "REC", "SUN", "SVC", "SOC"].sort(),
+    );
+    for (const code of ["EBL", "LBL", "CBL", "JPS", "H2O", "ECO", "BIK", "GDN", "MLK", "RFL"]) {
+      const lm = LANDMARKS.find((l) => l.code === code)!;
+      expect(dropsLoot(lm), code).toBe(false);
+    }
   });
 });
