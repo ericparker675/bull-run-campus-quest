@@ -148,6 +148,14 @@
       repeating-linear-gradient(0deg, transparent 0 12px, var(--frame-outline) 12px 18px, transparent 18px 26px) right / 4px 100% no-repeat;
   }
 }
+@utility compass {
+  background: var(--stone);
+  border: 3px solid var(--ink);
+  box-shadow: inset 2px 2px 0 oklch(1 0 0 / 0.3), inset -2px -2px 0 oklch(0 0 0 / 0.35);
+  border-radius: 6px;
+  & .compass-needle { transition: transform 0.4s steps(8); animation: compass-wobble 1.6s ease-in-out infinite; }
+}
+@keyframes compass-wobble { 0%,100% { translate: 0 0; } 50% { translate: 0 -1px; } }
 @utility slot-panel {
   background: var(--slot);
   border: 3px solid var(--ink);

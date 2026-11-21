@@ -65,6 +65,26 @@ export function ExplorerMap() {
   const [showAll, setShowAll] = useState(false);
   const [drawer, setDrawer] = useState<"progress" | "info" | null>(null);
   const [pan, setPan] = useState<{ x: number; y: number } | null>(null); // null = follow player
+  const [waypoint, setWaypoint] = useState<string | null>(null);
+  const [labelId, setLabelId] = useState<string | null>(null); // tapped / hovered pin
+  const [finder, setFinder] = useState(false);
+  const [query, setQuery] = useState("");
+  const [phase, setPhase] = useState(0);
+  const pins = useRef<{ id: string; x: number; y: number }[]>([]);
+  const hitPin = (cx: number, cy: number) => {
+    const c = canvasRef.current; if (!c) return null;
+    const r = c.getBoundingClientRect(); const k = c.width / r.width;
+    const x = (cx - r.left) * k, y = (cy - r.top) * k;
+    let best: string | null = null, bd = 22 * k;
+    for (const p of pins.current) { const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = p.id; } }
+    return best;
+  };
+  const hitRef = useRef(hitPin); hitRef.current = hitPin;
+  useEffect(() => {
+    if (!waypoint) return;
+    const t = setInterval(() => setPhase((p) => (p + 1) % 1000), 90);
+    return () => clearInterval(t);
+  }, [waypoint]);
   const view = useRef({ scale: 1, center: { x: 0, y: 0 } });
   useEffect(() => { if (zoom <= 1) setPan(null); }, [zoom]);
   const clampZoom = (z: number) => Math.min(8, Math.max(1, z));
@@ -80,6 +100,7 @@ export function ExplorerMap() {
     const pts = new Map<number, { x: number; y: number }>();
     let lastDist = 0;
     let drag: { x: number; y: number } | null = null;
+    let start: { x: number; y: number } | null = null;
     const dist = () => {
       const [a, b] = [...pts.values()];
       return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
@@ -87,9 +108,10 @@ export function ExplorerMap() {
     const onDown = (e: PointerEvent) => {
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pts.size === 2) lastDist = dist();
-      else drag = { x: e.clientX, y: e.clientY };
+      else { drag = { x: e.clientX, y: e.clientY }; start = { x: e.clientX, y: e.clientY }; }
     };
     const onMove = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && !pts.size) { setLabelId(hitRef.current(e.clientX, e.clientY)); return; }
       if (!pts.has(e.pointerId)) return;
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pts.size === 2 && lastDist > 0) {
@@ -107,7 +129,13 @@ export function ExplorerMap() {
         setPan(next);
       }
     };
-    const onUp = (e: PointerEvent) => { pts.delete(e.pointerId); lastDist = 0; drag = null; };
+    const onUp = (e: PointerEvent) => { 
+      if (start && pts.size === 1 && Math.hypot(e.clientX - start.x, e.clientY - start.y) < 8) {
+        const id = hitRef.current(e.clientX, e.clientY);
+        setLabelId(id);
+        if (id) setWaypoint(id);
+      }
+      start = null; pts.delete(e.pointerId); lastDist = 0; drag = null; };
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("pointermove", onMove);
@@ -361,26 +389,51 @@ export function ExplorerMap() {
       const p = project(lat, lng);
       return { x: Math.round(W / 2 + (p.x - center.x) * SCALE), y: Math.round(H / 2 + (p.y - center.y) * SCALE) };
     };
-    // landmarks: blocky pins with a readable pixel label
+    // glowing dashed path from the player to the active waypoint
+    const wp = LANDMARKS.find((l) => l.id === waypoint);
+    if (wp && pos) {
+      const a = toScreen(pos.lat, pos.lng), b = toScreen(wp.lat, wp.lng);
+      ctx.save();
+      ctx.lineCap = "butt";
+      ctx.strokeStyle = badge[wp.category] || gold;
+      ctx.shadowColor = ctx.strokeStyle as string; ctx.shadowBlur = 12 * dpr;
+      ctx.lineWidth = 5 * dpr;
+      ctx.setLineDash([10 * dpr, 8 * dpr]);
+      ctx.lineDashOffset = -phase * 2 * dpr;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.strokeStyle = ink; ctx.lineWidth = 1.5 * dpr; ctx.stroke();
+      ctx.restore();
+    }
+    // landmarks: colour-coded pixel icons; full name only when tapped/hovered/active
     ctx.textAlign = "center";
-    const out = 7 * dpr, inn = 4 * dpr;
+    pins.current = [];
+    const labels: { lm: (typeof LANDMARKS)[number]; p: { x: number; y: number } }[] = [];
     for (const lm of LANDMARKS) {
       const p = toScreen(lm.lat, lm.lng);
       const k = `${Math.floor(project(lm.lat, lm.lng).x / CELL)},${Math.floor(project(lm.lat, lm.lng).y / CELL)}`;
-      if (!showAll && !cells.has(k)) continue;
+      const active = lm.id === waypoint;
+      if (!showAll && !cells.has(k) && !active) continue;
+      pins.current.push({ id: lm.id, x: p.x, y: p.y });
       const done = found[lm.id] !== undefined;
       const col = badge[lm.category] || gold;
+      const minor = lm.category === "campus";
+      const out = (minor ? 4 : 7) * dpr * (active ? 1.4 : 1), inn = (minor ? 2 : 4) * dpr * (active ? 1.4 : 1);
+      if (active) { ctx.fillStyle = col; ctx.globalAlpha = 0.35 + 0.25 * Math.sin(phase / 3); ctx.fillRect(p.x - out * 1.8, p.y - out * 1.8, out * 3.6, out * 3.6); ctx.globalAlpha = 1; }
       ctx.fillStyle = ink; ctx.fillRect(p.x - out, p.y - out, out * 2, out * 2);
-      ctx.globalAlpha = done ? 1 : 0.45;
+      ctx.globalAlpha = done || active ? 1 : 0.55;
       ctx.fillStyle = col; ctx.fillRect(p.x - inn, p.y - inn, inn * 2, inn * 2);
+      if (!minor) { ctx.fillStyle = marker; ctx.fillRect(p.x - inn, p.y - inn, dpr * 1.5, dpr * 1.5); }
       ctx.globalAlpha = 1;
-      ctx.font = `${10 * dpr}px 'Press Start 2P', monospace`;
-      const tw = ctx.measureText(lm.code).width;
-      ctx.fillStyle = ink; ctx.fillRect(p.x - tw / 2 - 4 * dpr, p.y - 30 * dpr, tw + 8 * dpr, 18 * dpr);
-      ctx.globalAlpha = done ? 1 : 0.6;
-      ctx.fillStyle = col; ctx.fillText(lm.code, p.x, p.y - 16 * dpr);
-      ctx.globalAlpha = 1;
+      if (active || lm.id === labelId) labels.push({ lm, p });
     }
+    for (const { lm, p } of labels) {
+      ctx.font = `${8 * dpr}px 'Press Start 2P', monospace`;
+      const tw = ctx.measureText(lm.name).width;
+      const lx = Math.min(W - tw / 2 - 6 * dpr, Math.max(tw / 2 + 6 * dpr, p.x));
+      ctx.fillStyle = ink; ctx.fillRect(lx - tw / 2 - 4 * dpr, p.y - 30 * dpr, tw + 8 * dpr, 16 * dpr);
+      ctx.fillStyle = badge[lm.category] || gold; ctx.fillText(lm.name, lx, p.y - 18 * dpr);
+    }
+    const out = 7 * dpr, inn = 4 * dpr;
     // player: white pointer like minecraft
     if (pos) {
       const p = toScreen(pos.lat, pos.lng);
@@ -397,9 +450,18 @@ export function ExplorerMap() {
         ctx.fillStyle = marker; ctx.fillRect(p.x - inn - dpr, p.y - inn - dpr, (inn + dpr) * 2, (inn + dpr) * 2);
       }
     }
-  }, [pos, cells, found, tick, zoom, showAll, heading, pan]);
+  }, [pos, cells, found, tick, zoom, showAll, heading, pan, waypoint, labelId, phase]);
 
   const count = Object.keys(found).length;
+  const wpLm = LANDMARKS.find((l) => l.id === waypoint) ?? null;
+  const wpDist = wpLm && pos ? distM(pos, wpLm) : null;
+  const wpBearing = wpLm && pos ? (Math.atan2(project(wpLm.lat, wpLm.lng).x - project(pos.lat, pos.lng).x, project(pos.lat, pos.lng).y - project(wpLm.lat, wpLm.lng).y) * 180) / Math.PI : 0;
+  const pick = (id: string) => { setWaypoint(id); setLabelId(id); setFinder(false); };
+  const nearest = (cat: Category) => {
+    const from = pos ?? CAMPUS_CENTER;
+    const best = LANDMARKS.filter((l) => l.category === cat).sort((a, b) => distM(from, a) - distM(from, b))[0];
+    if (best) pick(best.id);
+  };
   return (
     <div className="mc-world relative h-[100dvh] w-full overflow-hidden">
       {/* full-screen map inside the torn paper border */}
@@ -428,8 +490,56 @@ export function ExplorerMap() {
         </div>
       )}
 
+      {wpLm && (
+        <div className={`slot-panel absolute left-1/2 top-[calc(max(3%,14px)+48px)] z-30 flex w-[min(86vw,560px)] -translate-x-1/2 items-center gap-3 px-3 py-2 ${drawer ? "sm:ml-36" : ""}`}>
+          <div className="compass relative h-10 w-10 shrink-0" aria-hidden>
+            <div className="compass-needle absolute inset-0" style={{ transform: `rotate(${wpBearing}deg)` }}>
+              <span className="absolute left-1/2 top-[6px] h-[14px] w-[4px] -translate-x-1/2 bg-destructive" />
+              <span className="absolute left-1/2 top-[20px] h-[12px] w-[4px] -translate-x-1/2 bg-parchment" />
+            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className={`truncate font-pixel text-[9px] leading-4 sm:text-[11px] ${BADGE_TEXT[wpLm.category]}`}>{wpLm.name}</div>
+            <div className="font-pixel text-[8px] text-parchment sm:text-[10px]">
+              {wpDist === null ? "Waiting for your location" : `${wpDist < 1000 ? Math.round(wpDist) + "m" : (wpDist / 1000).toFixed(1) + "km"} • ${Math.max(1, Math.round(wpDist / 80))} min walk`}
+            </div>
+          </div>
+          <button onClick={() => { setWaypoint(null); setLabelId(null); }} aria-label="Clear waypoint" className="mc-btn h-8 w-8 shrink-0 font-pixel text-[10px]">X</button>
+        </div>
+      )}
+
+      {finder && (
+        <div className="absolute inset-0 z-50 grid place-items-center bg-ink/60 p-4" onClick={() => setFinder(false)}>
+          <div className="slot-panel flex max-h-[75dvh] w-full max-w-md flex-col gap-2 p-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2">
+              <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search buildings…" className="min-w-0 flex-1 border-2 border-ink bg-parchment px-2 py-2 font-pixel text-[10px] text-ink outline-none" />
+              <button onClick={() => setFinder(false)} aria-label="Close search" className="mc-btn h-9 w-9 font-pixel text-[10px]">X</button>
+            </div>
+            <ul className="flex-1 overflow-y-auto">
+              {LANDMARKS.filter((l) => `${l.name} ${l.code}`.toLowerCase().includes(query.trim().toLowerCase()))
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((l) => (
+                  <li key={l.id}>
+                    <button onClick={() => pick(l.id)} className="flex w-full items-center gap-2 border-b border-ink/30 px-1 py-2.5 text-left">
+                      <span className="h-3 w-3 shrink-0 border-2 border-ink" style={{ background: `var(${CATEGORY_META[l.category].cssVar})` }} />
+                      <span className={`font-pixel text-[9px] leading-4 ${BADGE_TEXT[l.category]}`}>{l.name.includes(`(${l.code})`) ? l.name : `${l.name} (${l.code})`}</span>
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* quick-find action bar */}
+      <div className="absolute bottom-[max(3%,18px)] left-1/2 z-30 flex w-[min(92vw,560px)] -translate-x-1/2 gap-1.5">
+        <button onClick={() => nearest("safety")} className="mc-btn min-h-11 flex-1 px-1 py-1.5 font-pixel text-[8px] leading-3 sm:text-[10px]">🛡️ Nearest Blue Light</button>
+        <button onClick={() => nearest("eco")} className="mc-btn min-h-11 flex-1 px-1 py-1.5 font-pixel text-[8px] leading-3 sm:text-[10px]">💧 Nearest Water / Eco</button>
+        <button onClick={() => { setQuery(""); setFinder(true); }} className="mc-btn min-h-11 flex-1 px-1 py-1.5 font-pixel text-[8px] leading-3 sm:text-[10px]">🔍 Find Building</button>
+      </div>
+
       {/* floating zoom + locate, right side */}
-      <div className="absolute bottom-[max(9%,64px)] right-[max(7%,22px)] z-30 flex flex-col gap-1.5">
+      <div className="absolute bottom-[calc(max(3%,18px)+60px)] right-[max(7%,22px)] z-30 flex flex-col gap-1.5">
         <button className="mc-btn h-10 w-10 font-pixel text-sm sm:h-12 sm:w-12" aria-label="Zoom in" onClick={() => setZoom((z) => clampZoom(z * 1.5))}>+</button>
         <button className="mc-btn h-10 w-10 font-pixel text-sm sm:h-12 sm:w-12" aria-label="Zoom out" onClick={() => setZoom((z) => clampZoom(z / 1.5))}>−</button>
         {pan && (
@@ -458,7 +568,7 @@ export function ExplorerMap() {
       )}
 
       {/* floating bottom controls */}
-      <div className="absolute bottom-[max(5%,26px)] left-[max(7%,22px)] z-30 flex flex-col items-start gap-1.5">
+      <div className="absolute bottom-[calc(max(3%,18px)+60px)] left-[max(7%,22px)] z-30 flex flex-col items-start gap-1.5">
         {mode === "demo" && (
           <div className="grid grid-cols-3 gap-1">
             <span /><button className="mc-btn h-10 w-10 text-base sm:h-12 sm:w-12" onClick={() => step(0, -1)} aria-label="North">▲</button><span />
