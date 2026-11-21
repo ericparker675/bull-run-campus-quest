@@ -389,7 +389,7 @@ export function ExplorerMap() {
   return (
     <div className="mc-world relative h-[100dvh] w-full overflow-hidden">
       {/* full-screen map inside the torn paper border */}
-      <div className="map-frame absolute inset-0">
+      <div className="map-frame absolute inset-[8px]">
         <canvas ref={canvasRef} className="h-full w-full touch-none" aria-label="Explored campus map" />
         {!pos && (
           <div className="absolute inset-0 grid place-items-center px-[18%] text-center font-pixel text-xs leading-relaxed text-ink">

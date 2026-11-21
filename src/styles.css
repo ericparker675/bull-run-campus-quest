@@ -112,6 +112,8 @@
   --stone: oklch(0.55 0.005 0);
   --slot: oklch(0.3 0.01 60 / 0.85);
   --charcoal: oklch(0.27 0.01 60);
+  --frame-outline: #5C4033;
+  --frame-trim: #D8C39E;
 }
 
 @theme inline {
@@ -130,32 +132,20 @@
 @utility text-shadow-block { text-shadow: 3px 3px 0 var(--ink); }
 @utility map-frame {
   isolation: isolate;
-  padding: 0;
-  background: transparent;
-  -webkit-mask-image: url("/map-frame-square.png");
-  mask-image: url("/map-frame-square.png");
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
-  &::before {
+  background: var(--fog);
+  box-shadow: 0 0 0 2px var(--frame-outline);
+  /* subtle 2px pixel teeth stepping out of the outline */
+  &::after {
     content: "";
     position: absolute;
-    inset: 0;
-    z-index: 10;
+    inset: -4px;
+    z-index: -1;
     pointer-events: none;
-    background-image: url("/map-frame-square-cutout.png");
-    background-size: 100% 100%;
-    background-position: center;
-    image-rendering: pixelated;
-  }
-}
-/* Phones: the map fills the screen height, so use the taller parchment cut. */
-@media (max-aspect-ratio: 4/5) {
-  .map-frame {
-    -webkit-mask-image: url("/map-frame-tall.png");
-    mask-image: url("/map-frame-tall.png");
-  }
-  .map-frame::before {
-    background-image: url("/map-frame-tall-cutout.png");
+    background:
+      repeating-linear-gradient(90deg, var(--frame-outline) 0 8px, transparent 8px 20px) top / 100% 4px no-repeat,
+      repeating-linear-gradient(90deg, transparent 0 10px, var(--frame-outline) 10px 16px, transparent 16px 24px) bottom / 100% 4px no-repeat,
+      repeating-linear-gradient(0deg, var(--frame-outline) 0 8px, transparent 8px 22px) left / 4px 100% no-repeat,
+      repeating-linear-gradient(0deg, transparent 0 12px, var(--frame-outline) 12px 18px, transparent 18px 26px) right / 4px 100% no-repeat;
   }
 }
 @utility slot-panel {
@@ -186,7 +176,7 @@
   box-shadow: inset 2px 2px 0 oklch(0.78 0.01 60 / 0.55), inset -2px -2px 0 oklch(0 0 0 / 0.5), 4px 4px 0 oklch(0 0 0 / 0.3);
 }
 @utility mc-world {
-  background-color: oklch(0.90 0.06 90);
+  background-color: var(--frame-trim);
 }
 @utility map-held {
   transform: none;
