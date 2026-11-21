@@ -146,6 +146,22 @@
   &:active { box-shadow: inset -2px -2px 0 oklch(1 0 0 / 0.35), inset 2px 2px 0 oklch(0 0 0 / 0.35); }
 }
 
+@utility mc-world {
+  background-color: oklch(0.47 0.12 140);
+  background-image:
+    linear-gradient(to bottom, oklch(0.78 0.09 235) 0, oklch(0.86 0.06 230) 14%, transparent 14%),
+    linear-gradient(to bottom, transparent 14%, oklch(0.55 0.14 135) 14%, oklch(0.55 0.14 135) 16%, oklch(0.42 0.07 55) 16%, oklch(0.36 0.06 50) 24%, transparent 24%),
+    repeating-conic-gradient(oklch(0.45 0.11 140) 0 25%, oklch(0.5 0.12 138) 0 50%);
+  background-size: 100% 100%, 100% 100%, 24px 24px;
+  background-attachment: fixed;
+}
+@utility map-held {
+  transform: rotateX(16deg);
+  transform-origin: 50% 100%;
+  border-color: oklch(0.82 0.06 80);
+  box-shadow: 0 0 0 3px oklch(0.6 0.06 70), 0 30px 40px oklch(0 0 0 / 0.35);
+}
+
 @layer base {
   * {
     border-color: var(--color-border);

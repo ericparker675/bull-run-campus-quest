@@ -353,7 +353,7 @@ export function ExplorerMap() {
 
   const count = Object.keys(found).length;
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-3 sm:p-6">
+    <div className="mc-world flex min-h-screen flex-col items-center justify-center gap-4 p-3 sm:p-6">
       <header className="flex w-full max-w-3xl items-center justify-between gap-2">
         <h1 className="font-pixel text-sm text-foreground text-shadow-block sm:text-lg">USF Explorer Map</h1>
         <div className="text-right font-pixel text-[10px] leading-5 text-foreground sm:text-xs">
@@ -362,7 +362,8 @@ export function ExplorerMap() {
         </div>
       </header>
 
-      <div className="map-frame relative aspect-[4/5] w-full max-w-3xl sm:aspect-[4/3]">
+      <div className="w-full max-w-3xl [perspective:1100px]">
+      <div className="map-frame map-held relative aspect-[4/5] w-full sm:aspect-[4/3]">
         <canvas ref={canvasRef} className="h-full w-full touch-none" aria-label="Explored campus map" />
         {!pos && (
           <div className="absolute inset-0 grid place-items-center p-6 text-center font-pixel text-xs text-ink">
@@ -396,6 +397,8 @@ export function ExplorerMap() {
             </p>
           </div>
         )}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-pixel text-2xl text-parchment opacity-70 text-shadow-block" aria-hidden>+</div>
+      </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-2">
