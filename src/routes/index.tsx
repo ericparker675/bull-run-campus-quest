@@ -3,6 +3,7 @@ import { ExplorerMap } from "@/components/ExplorerMap";
 import { WorldLoading } from "@/components/WorldLoading";
 import { TitleScreen, type TitleChoice } from "@/components/TitleScreen";
 import { useState } from "react";
+import { MusicToggle } from "@/components/MusicToggle";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -20,11 +21,13 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const [choice, setChoice] = useState<TitleChoice | null>(null);
-  if (!choice) return <TitleScreen onChoose={setChoice} />;
   return (
     <>
+      <MusicToggle />
+      {!choice ? <TitleScreen onChoose={setChoice} /> : <>
       <ExplorerMap initialMode={choice.mode} initialDrawer={choice.guide ? "progress" : null} />
       {!choice.guide && <WorldLoading />}
+      </>}
     </>
   );
 }
