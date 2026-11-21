@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ExplorerMap } from "@/components/ExplorerMap";
+import { WorldLoading } from "@/components/WorldLoading";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -12,5 +13,10 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: ExplorerMap,
+  component: () => (
+    <>
+      <ExplorerMap />
+      <WorldLoading />
+    </>
+  ),
 });

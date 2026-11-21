@@ -203,3 +203,21 @@
     color: var(--color-foreground);
   }
 }
+
+:root {
+  --mc-black: #000000;
+  --mc-gray: #8b8b8b;
+  --mc-grass: #38b000;
+  --mc-water: #2563eb;
+  --mc-white: #ffffff;
+  --mc-cyan: #55ffff;
+}
+.mc-dirt {
+  background-color: #1e1611;
+  background-image:
+    linear-gradient(45deg, #2a1f18 25%, transparent 25%, transparent 75%, #2a1f18 75%),
+    linear-gradient(45deg, #2a1f18 25%, transparent 25%, transparent 75%, #2a1f18 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+  image-rendering: pixelated;
+}
