@@ -132,8 +132,8 @@
   isolation: isolate;
   padding: 0;
   background: transparent;
-  -webkit-mask-image: url("/__l5e/assets-v1/0f2c5001-48ef-4a87-8060-3af9c16d7b1f/map-frame.png");
-  mask-image: url("/__l5e/assets-v1/0f2c5001-48ef-4a87-8060-3af9c16d7b1f/map-frame.png");
+  -webkit-mask-image: url("/map-frame-square.png");
+  mask-image: url("/map-frame-square.png");
   -webkit-mask-size: 100% 100%;
   mask-size: 100% 100%;
   &::before {
@@ -142,11 +142,21 @@
     inset: 0;
     z-index: 10;
     pointer-events: none;
-    background-image: url("/__l5e/assets-v1/0f7cab89-f9f6-4491-9caf-f30dfb7827b4/map-frame-cutout.png");
+    background-image: url("/map-frame-square-cutout.png");
     background-size: 100% 100%;
     background-position: center;
     image-rendering: pixelated;
     filter: drop-shadow(6px 6px 0 oklch(0 0 0 / 0.3));
+  }
+}
+/* Phones: the map fills the screen height, so use the taller parchment cut. */
+@media (max-width: 639px) {
+  .map-frame {
+    -webkit-mask-image: url("/map-frame-tall.png");
+    mask-image: url("/map-frame-tall.png");
+  }
+  .map-frame::before {
+    background-image: url("/map-frame-tall-cutout.png");
   }
 }
 @utility slot-panel {

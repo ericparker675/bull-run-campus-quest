@@ -55,7 +55,7 @@ export function ExplorerMap() {
   const [cells, setCells] = useState<Set<string>>(new Set());
   const [found, setFound] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<string | null>(null);
-  const [disc, setDisc] = useState<{ name: string; category: Category } | null>(null);
+  const [disc, setDisc] = useState<{ name: string; emoji: string; cssVar: string } | null>(null);
   const discTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [heading, setHeading] = useState(0); // radians, 0 = north, clockwise
   const lastFix = useRef<{ lat: number; lng: number } | null>(null);
@@ -108,7 +108,6 @@ export function ExplorerMap() {
       el.removeEventListener("pointercancel", onUp);
     };
   }, []);
-  const [toast, setToast] = useState<string | null>(null);
   const loaded = useRef(false);
 
   useEffect(() => {
@@ -131,8 +130,9 @@ export function ExplorerMap() {
     if (earned.length) {
       setAchv((a) => [...a, ...earned.map((e) => e.pct)]);
       const top = earned[earned.length - 1]!;
-      setToast(`${top.title} — explored ${top.pct}% of campus!`);
-      setTimeout(() => setToast(null), 5000);
+      setDisc({ name: `${top.title} — explored ${top.pct}% of campus!`, emoji: "🏆", cssVar: "--gold" });
+      if (discTimer.current) clearTimeout(discTimer.current);
+      discTimer.current = setTimeout(() => setDisc(null), 4500);
     }
   }, [pct]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -209,7 +209,7 @@ export function ExplorerMap() {
         // Curated facts (safety / eco / essentials) show instantly; Claude adds the rest.
         const seed = lm.fact ?? "";
         setFound((f) => ({ ...f, [lm.id]: seed }));
-        setDisc({ name: lm.name, category: lm.category });
+        setDisc({ name: lm.name, emoji: CATEGORY_META[lm.category].emoji, cssVar: CATEGORY_META[lm.category].cssVar });
         if (discTimer.current) clearTimeout(discTimer.current);
         discTimer.current = setTimeout(() => setDisc(null), 3500);
         describeLandmark({ data: { name: lm.name, code: lm.code } })
@@ -387,41 +387,33 @@ export function ExplorerMap() {
 
   const count = Object.keys(found).length;
   return (
-    <div className={`mc-world flex min-h-[100dvh] flex-col items-center justify-start gap-2 overflow-x-hidden px-1 pb-3 pt-2 transition-[padding] duration-300 ease-out sm:justify-center sm:gap-4 sm:p-6 ${drawer ? "sm:pl-80" : ""}`}>
-      <header className="grid w-full max-w-[600px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-2">
-        <h1 className="truncate font-pixel text-xs text-foreground text-shadow-block sm:text-lg">USF Explorer Map</h1>
-        <div className="text-right font-pixel text-[9px] leading-4 text-foreground sm:text-xs sm:leading-5">
-          <div>🗺 {pct.toFixed(1)}% explored</div>
-          <div>⛏ {count}/{LANDMARKS.length} found</div>
-        </div>
-        <div className="col-span-2 flex gap-1.5 sm:hidden">
-          <button onClick={() => setDrawer((d) => (d === "progress" ? null : "progress"))} className="mc-btn min-h-9 flex-1 px-2 py-1.5 font-pixel text-[9px]">🏆 Progress</button>
-          <button onClick={() => setDrawer((d) => (d === "info" ? null : "info"))} className="mc-btn min-h-9 flex-1 px-2 py-1.5 font-pixel text-[9px]">📖 Campus info</button>
+    <div className={`mc-world flex h-[100dvh] flex-col items-center justify-start gap-1.5 overflow-hidden px-0 pb-2 pt-1.5 transition-[padding] duration-300 ease-out sm:justify-center sm:gap-4 sm:p-6 ${drawer ? "sm:pl-80" : ""}`}>
+      <header className="flex w-full max-w-[420px] items-center gap-2 px-1 sm:max-w-[520px]">
+        <h1 className="min-w-0 truncate font-pixel text-[10px] text-foreground text-shadow-block sm:text-lg">USF Explorer Map</h1>
+        <div className="ml-auto shrink-0 font-pixel text-[8px] text-foreground text-shadow-block sm:text-xs">🗺 {pct.toFixed(0)}% • ⛏ {count}/{LANDMARKS.length}</div>
+        <div className="flex shrink-0 gap-1.5 sm:hidden">
+          <button onClick={() => setDrawer((d) => (d === "progress" ? null : "progress"))} aria-label="Toggle progress panel" className="mc-btn min-h-8 px-2 py-1 font-pixel text-[9px]">🏆</button>
+          <button onClick={() => setDrawer((d) => (d === "info" ? null : "info"))} aria-label="Toggle campus info panel" className="mc-btn min-h-8 px-2 py-1 font-pixel text-[9px]">📖</button>
         </div>
       </header>
 
-      <div className="w-[min(100vw,62dvh)] max-w-[600px] sm:w-[92vw] sm:max-w-[460px]">
-      <div className="map-frame map-held relative aspect-square w-full">
+      {pos && gpsMsg && mode === "gps" && (
+        <div className="max-w-[94vw] bg-ink px-2 py-1 text-center font-pixel text-[9px] leading-relaxed text-parchment sm:max-w-[520px]">
+          {gpsMsg}
+        </div>
+      )}
+
+      <div className="map-frame map-held relative min-h-0 w-[94vw] max-w-[420px] flex-1 sm:aspect-square sm:h-auto sm:w-[92vw] sm:max-w-[520px] sm:flex-none">
         <canvas ref={canvasRef} className="h-full w-full touch-none" aria-label="Explored campus map" />
         {!pos && (
           <div className="absolute inset-0 grid place-items-center p-6 text-center font-pixel text-xs text-ink">
             {gpsMsg}
           </div>
         )}
-        {pos && gpsMsg && mode === "gps" && (
-          <div className="absolute left-2 top-2 bg-ink px-2 py-1 font-pixel text-[9px] text-parchment">{gpsMsg}</div>
-        )}
-        <div className="absolute right-[22%] top-[13%] z-20 flex flex-col gap-2">
-          <button className="mc-btn h-12 w-12 font-pixel text-base" aria-label="Zoom in" onClick={() => setZoom((z) => clampZoom(z * 1.5))}>+</button>
-          <button className="mc-btn h-12 w-12 font-pixel text-base" aria-label="Zoom out" onClick={() => setZoom((z) => clampZoom(z / 1.5))}>−</button>
+        <div className="absolute right-[16%] top-[9%] z-20 flex flex-col gap-1.5">
+          <button className="mc-btn h-8 w-8 font-pixel text-sm sm:h-12 sm:w-12 sm:text-base" aria-label="Zoom in" onClick={() => setZoom((z) => clampZoom(z * 1.5))}>+</button>
+          <button className="mc-btn h-8 w-8 font-pixel text-sm sm:h-12 sm:w-12 sm:text-base" aria-label="Zoom out" onClick={() => setZoom((z) => clampZoom(z / 1.5))}>−</button>
         </div>
-        {toast && (
-          <div className="absolute inset-x-0 top-28 z-20 mx-auto w-fit slot-panel px-4 py-3 animate-in fade-in slide-in-from-top-4 sm:top-[11%]">
-            <p className="font-pixel text-[10px] text-gold">Achievement get!</p>
-            <p className="mt-2 font-pixel text-[10px] text-parchment">{toast}</p>
-          </div>
-        )}
-      </div>
       </div>
 
       {disc && (
@@ -432,37 +424,37 @@ export function ExplorerMap() {
         >
           <span
             className="grid h-10 w-10 shrink-0 place-items-center border-2 border-ink text-xl"
-            style={{ background: `var(${CATEGORY_META[disc.category].cssVar})` }}
+            style={{ background: `var(${disc.cssVar})` }}
           >
-            {CATEGORY_META[disc.category].emoji}
+            {disc.emoji}
           </span>
           <span className="min-w-0">
             <span className="block font-pixel text-[9px] text-gold">Advancement Made!</span>
-            <span className="mt-1 block truncate font-pixel text-[9px] text-parchment">{disc.name}</span>
+            <span className="mt-1 block font-pixel text-[9px] leading-4 text-parchment">{disc.name}</span>
           </span>
         </button>
       )}
 
-      <div className="flex w-full max-w-[460px] flex-col items-center gap-3">
+      <div className="flex w-full max-w-[420px] flex-col items-center gap-1.5">
         {mode === "demo" && (
-          <div className="grid grid-cols-3 gap-2">
-            <span /><button className="mc-btn h-14 w-14 text-xl" onClick={() => step(0, -1)} aria-label="North">▲</button><span />
-            <button className="mc-btn h-14 w-14 text-xl" onClick={() => step(-1, 0)} aria-label="West">◀</button>
-            <button className="mc-btn h-14 w-14 text-xl" onClick={() => step(0, 1)} aria-label="South">▼</button>
-            <button className="mc-btn h-14 w-14 text-xl" onClick={() => step(1, 0)} aria-label="East">▶</button>
+          <div className="grid grid-cols-3 gap-1.5">
+            <span /><button className="mc-btn h-11 w-11 text-lg sm:h-14 sm:w-14 sm:text-xl" onClick={() => step(0, -1)} aria-label="North">▲</button><span />
+            <button className="mc-btn h-11 w-11 text-lg sm:h-14 sm:w-14 sm:text-xl" onClick={() => step(-1, 0)} aria-label="West">◀</button>
+            <button className="mc-btn h-11 w-11 text-lg sm:h-14 sm:w-14 sm:text-xl" onClick={() => step(0, 1)} aria-label="South">▼</button>
+            <button className="mc-btn h-11 w-11 text-lg sm:h-14 sm:w-14 sm:text-xl" onClick={() => step(1, 0)} aria-label="East">▶</button>
           </div>
         )}
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <button onClick={() => setMode(mode === "gps" ? "demo" : "gps")} className="mc-btn min-h-10 px-4 py-2 font-pixel text-[10px]">
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
+          <button onClick={() => setMode(mode === "gps" ? "demo" : "gps")} className="mc-btn min-h-9 px-2.5 py-1.5 font-pixel text-[9px] sm:px-4 sm:py-2 sm:text-[10px]">
             {mode === "gps" ? "Demo walk" : "Use my location"}
           </button>
           <button
             onClick={() => setShowAll((s) => !s)}
-            className="mc-btn min-h-10 px-4 py-2 font-pixel text-[10px]"
+            className="mc-btn min-h-9 px-2.5 py-1.5 font-pixel text-[9px] sm:px-4 sm:py-2 sm:text-[10px]"
           >{showAll ? "Hide map" : "Reveal map"}</button>
           <button
             onClick={() => { if (confirm("Erase your explored map?")) { setCells(new Set()); setFound({}); setAchv([]); } }}
-            className="mc-btn min-h-10 px-4 py-2 font-pixel text-[10px]"
+            className="mc-btn min-h-9 px-2.5 py-1.5 font-pixel text-[9px] sm:px-4 sm:py-2 sm:text-[10px]"
           >Reset map</button>
         </div>
       </div>
@@ -595,10 +587,6 @@ export function ExplorerMap() {
           </button>
         </div>
       </div>
-
-      <p className="max-w-md text-center text-lg text-muted-foreground">
-        Walk around USF to uncover the map. Get close to a building to discover it. {mode === "demo" && "Use arrow keys / WASD."}
-      </p>
     </div>
   );
 }
