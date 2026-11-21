@@ -489,9 +489,10 @@ export function ExplorerMap() {
           onClick={() => setDrawerOpen((o) => !o)}
           aria-expanded={drawerOpen}
           aria-label={drawerOpen ? "Close progress panel" : "Open progress panel"}
-          className={`mc-btn mt-2 flex h-16 w-10 items-center justify-center rounded-l-none font-pixel text-[10px] transition-[margin] duration-300 ease-out ${drawerOpen ? "" : "-ml-64 sm:-ml-72"}`}
+          className={`mc-btn mt-2 flex h-56 w-10 flex-col items-center justify-center gap-2 rounded-l-none font-pixel text-[10px] transition-[margin] duration-300 ease-out ${drawerOpen ? "" : "-ml-64 sm:-ml-72"}`}
         >
-          {drawerOpen ? "◀" : "🏆"}
+          <span>{drawerOpen ? "◀" : "🏆"}</span>
+          <span className="[writing-mode:vertical-rl] text-[8px] tracking-widest">PROGRESS</span>
         </button>
       </div>
 
