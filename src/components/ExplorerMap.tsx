@@ -51,10 +51,10 @@ const RARITY_CLASS: Record<Rarity, string> = { common: "text-parchment", rare: "
 
 const playerImg: HTMLImageElement = typeof Image !== "undefined" ? Object.assign(new Image(), { src: playerIcon.url }) : ({} as HTMLImageElement);
 
-export function ExplorerMap() {
+export function ExplorerMap({ initialMode = "gps", initialDrawer = null }: { initialMode?: "gps" | "demo"; initialDrawer?: "progress" | "info" | null } = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pos, setPos] = useState<{ lat: number; lng: number } | null>(null);
-  const [mode, setMode] = useState<"gps" | "demo">("gps");
+  const [mode, setMode] = useState<"gps" | "demo">(initialMode);
   const [gpsMsg, setGpsMsg] = useState("Looking for your location…");
   const [cells, setCells] = useState<Set<string>>(new Set());
   const [found, setFound] = useState<Record<string, string>>({});
@@ -67,7 +67,7 @@ export function ExplorerMap() {
   const [achv, setAchv] = useState<number[]>([]);
   const [zoom, setZoom] = useState(1);
   const [showAll, setShowAll] = useState(false);
-  const [drawer, setDrawer] = useState<"progress" | "info" | null>(null);
+  const [drawer, setDrawer] = useState<"progress" | "info" | null>(initialDrawer);
   const [pan, setPan] = useState<{ x: number; y: number } | null>(null); // null = follow player
   const [waypoint, setWaypoint] = useState<string | null>(null);
   const [labelId, setLabelId] = useState<string | null>(null); // tapped / hovered pin

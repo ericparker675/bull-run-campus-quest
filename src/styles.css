@@ -221,3 +221,11 @@
   background-position: 0 0, 8px 8px;
   image-rendering: pixelated;
 }
+
+@keyframes mc-splash { 0%,100% { transform: rotate(-20deg) scale(1); } 50% { transform: rotate(-20deg) scale(1.12); } }
+.mc-splash { animation: mc-splash 0.9s ease-in-out infinite; color: #ffff55; text-shadow: 2px 2px 0 #3f3f15; }
+.mc-logo { color: #c6c6c6; text-shadow: 2px 2px 0 #8b8b8b, 4px 4px 0 #6b6b6b, 6px 6px 0 #4a4a4a, 8px 8px 0 #1e1e1e; }
+.mc-title-btn { background: #8b8b8b; color: #fff; border: 2px solid #000; box-shadow: inset 2px 2px 0 #c6c6c6, inset -2px -3px 0 #555; text-shadow: 2px 2px 0 #3f3f3f; image-rendering: pixelated; }
+.mc-title-btn:hover, .mc-title-btn:focus-visible { background: #7b8fd4; box-shadow: inset 2px 2px 0 #b9c8ff, inset -2px -3px 0 #3c4a8a; color: #ffffa0; outline: none; }
+@keyframes mc-pan { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+.mc-title-bg { background: url(/mc-sunset.gif) center/cover; image-rendering: pixelated; }

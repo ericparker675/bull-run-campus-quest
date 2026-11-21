@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ExplorerMap } from "@/components/ExplorerMap";
 import { WorldLoading } from "@/components/WorldLoading";
+import { TitleScreen, type TitleChoice } from "@/components/TitleScreen";
+import { useState } from "react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -13,10 +15,16 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: () => (
-    <>
-      <ExplorerMap />
-      <WorldLoading />
-    </>
-  ),
+  component: Home,
 });
+
+function Home() {
+  const [choice, setChoice] = useState<TitleChoice | null>(null);
+  if (!choice) return <TitleScreen onChoose={setChoice} />;
+  return (
+    <>
+      <ExplorerMap initialMode={choice.mode} initialDrawer={choice.guide ? "progress" : null} />
+      {!choice.guide && <WorldLoading />}
+    </>
+  );
+}
