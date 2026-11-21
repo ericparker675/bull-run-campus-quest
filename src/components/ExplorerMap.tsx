@@ -403,7 +403,6 @@ export function ExplorerMap() {
             </p>
           </div>
         )}
-        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-pixel text-2xl text-parchment opacity-70 text-shadow-block" aria-hidden>+</div>
       </div>
       </div>
 
