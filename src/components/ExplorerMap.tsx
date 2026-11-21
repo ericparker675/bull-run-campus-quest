@@ -55,6 +55,7 @@ export function ExplorerMap() {
   const [tick, setTick] = useState(0);
   const [achv, setAchv] = useState<number[]>([]);
   const [zoom, setZoom] = useState(1);
+  const [showAll, setShowAll] = useState(false);
   const clampZoom = (z: number) => Math.min(8, Math.max(1, z));
   useEffect(() => {
     const el = canvasRef.current;
@@ -249,11 +250,12 @@ export function ExplorerMap() {
     const edges: number[] = [];
     ctx.save();
     ctx.beginPath();
+    if (showAll) ctx.rect(0, 0, W, H); // reveal-all: draw the base map everywhere
     cells.forEach((k) => {
       const [i, j] = k.split(",").map(Number) as [number, number];
       const x = (i * CELL - ox) * SCALE, y = (j * CELL - oy) * SCALE;
       if (x < -10 || y < -10 || x > W + 10 || y > H + 10) return;
-      ctx.rect(Math.floor(x), Math.floor(y), Math.ceil(cellPx) + 1, Math.ceil(cellPx) + 1);
+      if (!showAll) ctx.rect(Math.floor(x), Math.floor(y), Math.ceil(cellPx) + 1, Math.ceil(cellPx) + 1);
       if (cellPx < 4) return;
       const n = !cells.has(`${i},${j - 1}`), s = !cells.has(`${i},${j + 1}`);
       const w = !cells.has(`${i - 1},${j}`), e = !cells.has(`${i + 1},${j}`);
@@ -276,7 +278,7 @@ export function ExplorerMap() {
     ctx.restore();
 
     // Explored edge: soften the blocky shoreline where land meets fog.
-    if (frontier.length) {
+    if (frontier.length && !showAll) {
       ctx.globalAlpha = 0.28;
       ctx.fillStyle = fog;
       for (let n = 0; n < frontier.length; n += 2) {
@@ -287,7 +289,7 @@ export function ExplorerMap() {
 
     // Blocky coastline: a dark outline where explored land meets the fog, so
     // the explored shape is obvious at a glance.
-    if (edges.length) {
+    if (edges.length && !showAll) {
       ctx.globalAlpha = 0.5;
       ctx.strokeStyle = ink;
       ctx.lineWidth = Math.max(1, Math.round(dpr));
@@ -303,7 +305,7 @@ export function ExplorerMap() {
     // Unexplored fog: blocky dots on a staggered grid.
     const step = 12 * dpr, dot = 3 * dpr;
     ctx.fillStyle = fogDot;
-    for (let y = 0; y < H; y += step) for (let x = (y / step) % 2 ? step / 2 : 0; x < W; x += step) {
+    if (!showAll) for (let y = 0; y < H; y += step) for (let x = (y / step) % 2 ? step / 2 : 0; x < W; x += step) {
       const wx = Math.floor((center.x + (x - W / 2) / SCALE) / CELL), wy = Math.floor((center.y + (y - H / 2) / SCALE) / CELL);
       if (!cells.has(`${wx},${wy}`)) ctx.fillRect(x, y, dot, dot);
     }
@@ -333,7 +335,7 @@ export function ExplorerMap() {
     for (const lm of LANDMARKS) {
       const p = toScreen(lm.lat, lm.lng);
       const k = `${Math.floor(project(lm.lat, lm.lng).x / CELL)},${Math.floor(project(lm.lat, lm.lng).y / CELL)}`;
-      if (!cells.has(k)) continue;
+      if (!showAll && !cells.has(k)) continue;
       const done = found[lm.id] !== undefined;
       const col = badge[lm.category] || gold;
       ctx.fillStyle = ink; ctx.fillRect(p.x - out, p.y - out, out * 2, out * 2);
@@ -351,7 +353,7 @@ export function ExplorerMap() {
       ctx.fillStyle = ink; ctx.fillRect(p.x - out - dpr, p.y - out - dpr, (out + dpr) * 2, (out + dpr) * 2);
       ctx.fillStyle = marker; ctx.fillRect(p.x - inn - dpr, p.y - inn - dpr, (inn + dpr) * 2, (inn + dpr) * 2);
     }
-  }, [pos, cells, found, tick, zoom]);
+  }, [pos, cells, found, tick, zoom, showAll]);
 
   const count = Object.keys(found).length;
   return (
@@ -415,6 +417,10 @@ export function ExplorerMap() {
             <button className="mc-btn h-14 w-14 text-xl" onClick={() => step(1, 0)} aria-label="East">▶</button>
           </div>
         )}
+        <button
+          onClick={() => setShowAll((s) => !s)}
+          className="mc-btn min-h-12 px-4 py-3 font-pixel text-[10px]"
+        >{showAll ? "Hide map" : "Reveal map"}</button>
         <button
           onClick={() => { if (confirm("Erase your explored map?")) { setCells(new Set()); setFound({}); setAchv([]); } }}
           className="mc-btn min-h-12 px-4 py-3 font-pixel text-[10px]"
