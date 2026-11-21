@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState, useCallback, type CSSProperties } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { LANDMARKS, CAMPUS_CENTER, CAMPUS_BOUNDS, ACHIEVEMENTS, newlyEarned, DISCOVER_RADIUS_M, CATEGORY_META, CATEGORY_ORDER, type Landmark, type Category } from "@/lib/landmarks";
 import { describeLandmark } from "@/lib/discover.functions";
 import { Z, project, unproject, distM, clampToCampus } from "@/lib/geo";
-import mapFrameAsset from "@/assets/map-frame.png.asset.json";
 
 const CELL = 8; // world px per fog cell (~8.5m)
 const REVEAL_PX = 70; // reveal radius in world px (~74m)
@@ -371,10 +370,7 @@ export function ExplorerMap() {
       </header>
 
       <div className="w-full max-w-3xl [perspective:1100px]">
-      <div
-        className="map-frame map-held relative aspect-square w-full"
-        style={{ "--map-frame-url": `url("${mapFrameAsset.url}")` } as CSSProperties}
-      >
+      <div className="map-frame map-held relative aspect-[4/5] w-full sm:aspect-[4/3]">
         <canvas ref={canvasRef} className="h-full w-full touch-none" aria-label="Explored campus map" />
         {!pos && (
           <div className="absolute inset-0 grid place-items-center p-6 text-center font-pixel text-xs text-ink">
