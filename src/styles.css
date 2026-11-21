@@ -129,8 +129,12 @@
 @utility text-shadow-block { text-shadow: 3px 3px 0 var(--ink); }
 @utility map-frame {
   isolation: isolate;
-  padding: 13% 22%;
-  background: var(--frame);
+  padding: 0;
+  background: transparent;
+  -webkit-mask-image: url("/__l5e/assets-v1/0f2c5001-48ef-4a87-8060-3af9c16d7b1f/map-frame.png");
+  mask-image: url("/__l5e/assets-v1/0f2c5001-48ef-4a87-8060-3af9c16d7b1f/map-frame.png");
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
   &::before {
     content: "";
     position: absolute;
@@ -175,9 +179,7 @@
   image-rendering: pixelated;
 }
 @utility map-held {
-  transform: rotateX(16deg);
-  transform-origin: 50% 100%;
-  box-shadow: 0 30px 40px oklch(0 0 0 / 0.35);
+  transform: none;
 }
 
 @layer base {

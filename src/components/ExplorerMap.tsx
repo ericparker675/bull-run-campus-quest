@@ -1,3 +1,4 @@
+import playerIcon from "@/assets/player-icon.png.asset.json";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { LANDMARKS, CAMPUS_CENTER, CAMPUS_BOUNDS, ACHIEVEMENTS, newlyEarned, DISCOVER_RADIUS_M, CATEGORY_META, CATEGORY_ORDER, type Landmark, type Category } from "@/lib/landmarks";
 import { describeLandmark } from "@/lib/discover.functions";
@@ -43,6 +44,8 @@ function tile(z: number, tx: number, ty: number, onload: () => void) {
 }
 
 type Saved = { cells: string[]; found: Record<string, string>; achv?: number[] };
+
+const playerImg: HTMLImageElement = typeof Image !== "undefined" ? Object.assign(new Image(), { src: playerIcon.url }) : ({} as HTMLImageElement);
 
 export function ExplorerMap() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -353,8 +356,14 @@ export function ExplorerMap() {
     // player: white pointer like minecraft
     if (pos) {
       const p = toScreen(pos.lat, pos.lng);
-      ctx.fillStyle = ink; ctx.fillRect(p.x - out - dpr, p.y - out - dpr, (out + dpr) * 2, (out + dpr) * 2);
-      ctx.fillStyle = marker; ctx.fillRect(p.x - inn - dpr, p.y - inn - dpr, (inn + dpr) * 2, (inn + dpr) * 2);
+      const h = 22 * dpr, w = h * (100 / 140);
+      if (playerImg.complete && playerImg.naturalWidth) {
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(playerImg, p.x - w / 2, p.y - h / 2, w, h);
+      } else {
+        ctx.fillStyle = ink; ctx.fillRect(p.x - out - dpr, p.y - out - dpr, (out + dpr) * 2, (out + dpr) * 2);
+        ctx.fillStyle = marker; ctx.fillRect(p.x - inn - dpr, p.y - inn - dpr, (inn + dpr) * 2, (inn + dpr) * 2);
+      }
     }
   }, [pos, cells, found, tick, zoom, showAll]);
 
@@ -380,7 +389,7 @@ export function ExplorerMap() {
         {pos && gpsMsg && mode === "gps" && (
           <div className="absolute left-2 top-2 bg-ink px-2 py-1 font-pixel text-[9px] text-parchment">{gpsMsg}</div>
         )}
-        <div className="absolute right-[5%] top-[11%] z-20 flex flex-col gap-2">
+        <div className="absolute right-[22%] top-[13%] z-20 flex flex-col gap-2">
           <button className="mc-btn h-12 w-12 font-pixel text-base" aria-label="Zoom in" onClick={() => setZoom((z) => clampZoom(z * 1.5))}>+</button>
           <button className="mc-btn h-12 w-12 font-pixel text-base" aria-label="Zoom out" onClick={() => setZoom((z) => clampZoom(z / 1.5))}>−</button>
         </div>
