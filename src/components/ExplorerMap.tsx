@@ -380,18 +380,18 @@ export function ExplorerMap() {
         {pos && gpsMsg && mode === "gps" && (
           <div className="absolute left-2 top-2 bg-ink px-2 py-1 font-pixel text-[9px] text-parchment">{gpsMsg}</div>
         )}
-        <div className="absolute right-3 top-3 z-10 flex flex-col gap-2">
+        <div className="absolute right-[5%] top-[11%] z-20 flex flex-col gap-2">
           <button className="mc-btn h-12 w-12 font-pixel text-base" aria-label="Zoom in" onClick={() => setZoom((z) => clampZoom(z * 1.5))}>+</button>
           <button className="mc-btn h-12 w-12 font-pixel text-base" aria-label="Zoom out" onClick={() => setZoom((z) => clampZoom(z / 1.5))}>−</button>
         </div>
         {toast && (
-          <div className="absolute inset-x-0 top-28 mx-auto w-fit slot-panel px-4 py-3 animate-in fade-in slide-in-from-top-4 sm:top-3">
+          <div className="absolute inset-x-0 top-28 z-20 mx-auto w-fit slot-panel px-4 py-3 animate-in fade-in slide-in-from-top-4 sm:top-[11%]">
             <p className="font-pixel text-[10px] text-gold">Achievement get!</p>
             <p className="mt-2 font-pixel text-[10px] text-parchment">{toast}</p>
           </div>
         )}
         {popup && (
-          <div className="absolute inset-x-3 bottom-3 slot-panel p-4 animate-in fade-in slide-in-from-bottom-4">
+          <div className="absolute inset-x-[5%] bottom-[11%] z-20 slot-panel p-4 animate-in fade-in slide-in-from-bottom-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-pixel text-[10px] text-gold">New landmark discovered!</p>
