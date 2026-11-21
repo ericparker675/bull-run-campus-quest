@@ -22,7 +22,7 @@ export function TitleScreen({ onChoose }: { onChoose: (c: TitleChoice) => void }
           alt="Rocky the Bull breakdancing"
           className="mx-auto mt-3 h-24 [image-rendering:pixelated] sm:h-32"
         />
-        <span key={i} className="mc-splash font-pixel absolute -right-4 bottom-10 whitespace-nowrap text-[11px] sm:-right-16 sm:text-base">{SPLASHES[i]}</span>
+        <span key={i} className="mc-splash font-pixel absolute -right-4 top-6 whitespace-nowrap text-[11px] sm:-right-16 sm:top-10 sm:text-base">{SPLASHES[i]}</span>
       </div>
       <nav className="my-auto flex w-[280px] flex-col gap-2 sm:w-[360px]" aria-label="Main menu">
         <button className={btn} onClick={() => onChoose({ mode: "gps", guide: false })}>Start Exploring</button>
