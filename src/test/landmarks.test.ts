@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { LANDMARKS, CAMPUS_BOUNDS, CATEGORY_ORDER } from "@/lib/landmarks";
+import { LANDMARKS, CAMPUS_BOUNDS, CATEGORY_ORDER, DISCOVER_RADIUS_M } from "@/lib/landmarks";
+import { distM } from "@/lib/geo";
 
 const inBounds = (l: { lat: number; lng: number }) =>
   l.lat <= CAMPUS_BOUNDS.north && l.lat >= CAMPUS_BOUNDS.south &&
@@ -22,6 +23,15 @@ describe("track-relevant landmarks", () => {
     expect(new Set(LANDMARKS.map((l) => l.id)).size).toBe(LANDMARKS.length);
     expect(new Set(LANDMARKS.map((l) => l.code)).size).toBe(LANDMARKS.length);
     LANDMARKS.forEach((l) => expect(l.code.length).toBeLessThanOrEqual(3));
+  });
+
+  it("spreads landmarks out so no two are discovered at once", () => {
+    for (let i = 0; i < LANDMARKS.length; i++) {
+      for (let j = i + 1; j < LANDMARKS.length; j++) {
+        const a = LANDMARKS[i]!, b = LANDMARKS[j]!;
+        expect(distM(a, b), `${a.code} vs ${b.code}`).toBeGreaterThan(DISCOVER_RADIUS_M);
+      }
+    }
   });
 
   it("labels every category used by the map", () => {

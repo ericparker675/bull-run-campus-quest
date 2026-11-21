@@ -42,7 +42,7 @@ export const LANDMARKS: Landmark[] = [
 
   // 💧 Sustainability / Eco — Off the Grid (green pixel badges)
   {
-    id: "h2o", code: "H2O", name: "ENB Hydration Refill Station", lat: 28.05840, lng: -82.41540, category: "eco",
+    id: "h2o", code: "H2O", name: "ENB Hydration Refill Station", lat: 28.05810, lng: -82.41570, category: "eco",
     fact: "Filtered bottle refill station — about 156 plastic bottles saved per student each year.",
   },
   {
@@ -54,7 +54,7 @@ export const LANDMARKS: Landmark[] = [
     fact: "Free public air pump, repair tools, and shaded bike parking.",
   },
   {
-    id: "gdn", code: "GDN", name: "USF Botanical Gardens Trail", lat: 28.06490, lng: -82.41630, category: "eco",
+    id: "gdn", code: "GDN", name: "USF Botanical Gardens Trail", lat: 28.06120, lng: -82.40350, category: "eco",
     fact: "Native Florida tree canopy over a cool shaded walking path.",
   },
 
@@ -84,13 +84,20 @@ export const LANDMARKS: Landmark[] = [
   { id: "sun", code: "SUN", name: "Yuengling Center", lat: 28.05925, lng: -82.40685, category: "campus" },
   { id: "che", code: "CHE", name: "Chemistry Building", lat: 28.06155, lng: -82.41615, category: "campus" },
   { id: "svc", code: "SVC", name: "Student Services Building", lat: 28.06175, lng: -82.41205, category: "campus" },
+  // 🧱 Edge landmarks — spread out toward the corners of the map
+  { id: "mcc", code: "MCC", name: "Moffitt Cancer Center", lat: 28.06470, lng: -82.42330, category: "campus" },
+  { id: "cam", code: "CAM", name: "USF Contemporary Art Museum", lat: 28.05960, lng: -82.42050, category: "campus" },
+  { id: "mdc", code: "MDC", name: "Morsani College of Medicine", lat: 28.06620, lng: -82.41480, category: "campus" },
+  { id: "rfl", code: "RFL", name: "Sycamore Recreation Fields", lat: 28.05630, lng: -82.40650, category: "campus" },
+  { id: "soc", code: "SOC", name: "Corbett Soccer Stadium", lat: 28.05720, lng: -82.40320, category: "campus" },
+  { id: "alm", code: "ALM", name: "USF Alumni Center", lat: 28.06580, lng: -82.40520, category: "campus" },
 ];
 
 export const CAMPUS_CENTER = { lat: 28.0605, lng: -82.4125 };
 export const DISCOVER_RADIUS_M = 45;
 
 // Approximate USF Tampa campus bounds (Fowler Ave to Fletcher Ave, Bruce B Downs to ~50th St).
-export const CAMPUS_BOUNDS = { north: 28.0700, south: 28.0545, west: -82.4250, east: -82.4045 };
+export const CAMPUS_BOUNDS = { north: 28.0700, south: 28.0545, west: -82.4250, east: -82.4020 };
 
 export const ACHIEVEMENTS = [
   { pct: 1, title: "First Steps" },
