@@ -1,4 +1,4 @@
-import { CHEST_ART, type ChestArt } from "@/lib/chest-art";
+import { CHEST_ART, ROCKY_CHEST_ART, type ChestArt } from "@/lib/chest-art";
 import type { ChestKind } from "@/lib/loot";
 
 /** Crisp pixel-art sprite built from a character grid; one <rect> per lit pixel. */
@@ -29,4 +29,8 @@ function PixelSprite({ art, size, className }: { art: ChestArt; size: number; cl
 
 export function PixelChest({ kind, size = 64, className }: { kind: ChestKind; size?: number; className?: string | undefined }) {
   return <PixelSprite art={CHEST_ART[kind]} size={size} className={className} />;
+}
+
+export function RockyChest({ size = 64, className }: { size?: number; className?: string | undefined }) {
+  return <PixelSprite art={ROCKY_CHEST_ART} size={size} className={className} />;
 }

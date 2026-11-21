@@ -86,3 +86,19 @@ export const CHEST_ART: Record<ChestKind, ChestArt> = {
   shulker: { label: "Shulker Box", palette: SHULKER, rows: build({ eyes: true, mouth: true }) },
   ender: { label: "Ender Chest", palette: ENDER, rows: build({ bigGem: true }) },
 };
+
+const ROCKY: Record<Role, string> = {
+  o: "#06210F",
+  L: "#7CFF6B",
+  l: "#2FD14A",
+  B: "#1FA83A",
+  b: "#137A28",
+  F: "#0B4F1A",
+  M: "#FFD84A",
+  m: "#B88A00",
+  E: "#FFD84A",
+  Q: "#0B4F1A",
+};
+
+/** Special green chest, only dropped by finding Rocky D. Bull. */
+export const ROCKY_CHEST_ART: ChestArt = { label: "Rocky's Green Chest", palette: ROCKY, rows: build({ bigGem: true }) };

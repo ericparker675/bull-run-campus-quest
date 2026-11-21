@@ -1,5 +1,6 @@
 import bullDance from "@/assets/bull-breakdance.gif.asset.json";
 import { rockySpot, todayKey, ROCKY_FIND_RADIUS_M } from "@/lib/rocky";
+import { RockyReveal } from "@/components/RockyReveal";
 import playerIcon from "@/assets/player-icon.png.asset.json";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { LANDMARKS, CAMPUS_CENTER, CAMPUS_BOUNDS, ACHIEVEMENTS, newlyEarned, dropsLoot, DISCOVER_RADIUS_M, CATEGORY_META, CATEGORY_ORDER, type Category } from "@/lib/landmarks";
@@ -78,6 +79,7 @@ export function ExplorerMap({ initialMode = "gps", initialDrawer = null }: { ini
   const [phase, setPhase] = useState(0);
   const [day, setDay] = useState<string | null>(null);
   const [rockyFound, setRockyFound] = useState(false);
+  const [rockyChest, setRockyChest] = useState(false);
   const rockyRef = useRef<HTMLImageElement>(null);
   const rocky = day ? rockySpot(day) : null;
   useEffect(() => {
@@ -90,9 +92,7 @@ export function ExplorerMap({ initialMode = "gps", initialDrawer = null }: { ini
     if (distM(pos, rocky) < ROCKY_FIND_RADIUS_M) {
       setRockyFound(true);
       localStorage.setItem("rocky-found", day);
-      setDisc({ name: "You found Rocky D. Bull! Come back tomorrow.", emoji: "🐂", cssVar: "--gold" });
-      if (discTimer.current) clearTimeout(discTimer.current);
-      discTimer.current = setTimeout(() => setDisc(null), 4500);
+      setRockyChest(true);
     }
   }, [pos, day, rockyFound]); // eslint-disable-line react-hooks/exhaustive-deps
   const pins = useRef<{ id: string; x: number; y: number }[]>([]);
@@ -645,6 +645,8 @@ export function ExplorerMap({ initialMode = "gps", initialDrawer = null }: { ini
           </span>
         </button>
       )}
+
+      {rockyChest && <RockyReveal onClose={() => setRockyChest(false)} />}
 
       {/* Rocky daily hunt status */}
       {rocky && (
