@@ -387,20 +387,20 @@ export function ExplorerMap() {
 
   const count = Object.keys(found).length;
   return (
-    <div className={`mc-world flex min-h-[100dvh] flex-col items-center justify-center gap-4 overflow-x-hidden p-3 transition-[padding] duration-300 ease-out sm:p-6 ${drawer ? "pl-14 sm:pl-80" : ""}`}>
-      <header className="grid w-full max-w-[460px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+    <div className={`mc-world flex min-h-[100dvh] flex-col items-center justify-start gap-2 overflow-x-hidden px-1 pb-3 pt-2 transition-[padding] duration-300 ease-out sm:justify-center sm:gap-4 sm:p-6 ${drawer ? "sm:pl-80" : ""}`}>
+      <header className="grid w-full max-w-[600px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-2">
         <h1 className="truncate font-pixel text-xs text-foreground text-shadow-block sm:text-lg">USF Explorer Map</h1>
         <div className="text-right font-pixel text-[9px] leading-4 text-foreground sm:text-xs sm:leading-5">
           <div>🗺 {pct.toFixed(1)}% explored</div>
           <div>⛏ {count}/{LANDMARKS.length} found</div>
         </div>
-        <div className="col-span-2 flex gap-2 sm:hidden">
-          <button onClick={() => setDrawer((d) => (d === "progress" ? null : "progress"))} className="mc-btn min-h-10 flex-1 px-2 py-2 font-pixel text-[9px]">🏆 Progress</button>
-          <button onClick={() => setDrawer((d) => (d === "info" ? null : "info"))} className="mc-btn min-h-10 flex-1 px-2 py-2 font-pixel text-[9px]">📖 Campus info</button>
+        <div className="col-span-2 flex gap-1.5 sm:hidden">
+          <button onClick={() => setDrawer((d) => (d === "progress" ? null : "progress"))} className="mc-btn min-h-9 flex-1 px-2 py-1.5 font-pixel text-[9px]">🏆 Progress</button>
+          <button onClick={() => setDrawer((d) => (d === "info" ? null : "info"))} className="mc-btn min-h-9 flex-1 px-2 py-1.5 font-pixel text-[9px]">📖 Campus info</button>
         </div>
       </header>
 
-      <div className="w-[92vw] max-w-[460px]">
+      <div className="w-[min(100vw,62dvh)] max-w-[600px] sm:w-[92vw] sm:max-w-[460px]">
       <div className="map-frame map-held relative aspect-square w-full">
         <canvas ref={canvasRef} className="h-full w-full touch-none" aria-label="Explored campus map" />
         {!pos && (
