@@ -360,7 +360,7 @@ export function ExplorerMap() {
 
   const count = Object.keys(found).length;
   return (
-    <div className="mc-world flex min-h-screen flex-col items-center justify-center gap-4 p-3 sm:p-6">
+    <div className={`mc-world flex min-h-screen flex-col items-center justify-center gap-4 p-3 transition-[padding] duration-300 ease-out sm:p-6 ${drawerOpen ? "pl-14 sm:pl-80" : ""}`}>
       <header className="flex w-full max-w-3xl items-center justify-between gap-2">
         <h1 className="font-pixel text-sm text-foreground text-shadow-block sm:text-lg">USF Explorer Map</h1>
         <div className="text-right font-pixel text-[10px] leading-5 text-foreground sm:text-xs">
@@ -429,7 +429,7 @@ export function ExplorerMap() {
         >Reset map</button>
       </div>
       {/* left-side curtain: legend, landmark hotbar, achievements */}
-      <div className="fixed left-0 top-24 z-40 flex items-start">
+      <div className="fixed left-0 top-1/2 z-40 flex -translate-y-1/2 items-start">
         <div
           className={`max-h-[85vh] w-64 overflow-y-auto transition-transform duration-300 ease-out sm:w-72 ${
             drawerOpen ? "translate-x-0" : "-translate-x-full"
@@ -489,7 +489,7 @@ export function ExplorerMap() {
           onClick={() => setDrawerOpen((o) => !o)}
           aria-expanded={drawerOpen}
           aria-label={drawerOpen ? "Close progress panel" : "Open progress panel"}
-          className="mc-btn mt-2 flex h-16 w-10 items-center justify-center rounded-l-none font-pixel text-[10px]"
+          className={`mc-btn mt-2 flex h-16 w-10 items-center justify-center rounded-l-none font-pixel text-[10px] transition-[margin] duration-300 ease-out ${drawerOpen ? "" : "-ml-64 sm:-ml-72"}`}
         >
           {drawerOpen ? "◀" : "🏆"}
         </button>
