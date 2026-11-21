@@ -67,6 +67,19 @@ export function ExplorerMap() {
   const [popup, setPopup] = useState<{ lm: Landmark; text: string; loading: boolean; error?: string } | null>(null);
   const [tick, setTick] = useState(0);
   const [achv, setAchv] = useState<number[]>([]);
+  const [zoom, setZoom] = useState(1);
+  const clampZoom = (z: number) => Math.min(8, Math.max(1, z));
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+      setZoom((z) => clampZoom(z * Math.exp(-dy * 0.002)));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
   const [toast, setToast] = useState<string | null>(null);
   const loaded = useRef(false);
 
@@ -179,8 +192,13 @@ export function ExplorerMap() {
     const marker = css.getPropertyValue("--marker").trim();
     const gold = css.getPropertyValue("--gold").trim();
 
-    const center = { x: (NW.x + SE.x) / 2, y: (NW.y + SE.y) / 2 };
-    const SCALE = Math.min(W / (SE.x - NW.x), H / (SE.y - NW.y));
+    const SCALE = Math.min(W / (SE.x - NW.x), H / (SE.y - NW.y)) * zoom;
+    // Zoomed in: follow the player, but keep the view inside the campus.
+    const focus = pos ? project(pos.lat, pos.lng) : { x: (NW.x + SE.x) / 2, y: (NW.y + SE.y) / 2 };
+    const halfW = W / 2 / SCALE, halfH = H / 2 / SCALE;
+    const clampAxis = (v: number, lo: number, hi: number, half: number) =>
+      hi - lo <= half * 2 ? (lo + hi) / 2 : Math.min(hi - half, Math.max(lo + half, v));
+    const center = { x: clampAxis(focus.x, NW.x, SE.x, halfW), y: clampAxis(focus.y, NW.y, SE.y, halfH) };
     const s = SCALE / PIXEL;
     const sw = Math.ceil(W / PIXEL), sh = Math.ceil(H / PIXEL);
     const off = document.createElement("canvas");
@@ -239,7 +257,7 @@ export function ExplorerMap() {
       ctx.fillStyle = ink; ctx.fillRect(p.x - 7, p.y - 7, 14, 14);
       ctx.fillStyle = marker; ctx.fillRect(p.x - 4, p.y - 4, 8, 8);
     }
-  }, [pos, cells, found, tick]);
+  }, [pos, cells, found, tick, zoom]);
 
   const count = Object.keys(found).length;
   return (
@@ -262,6 +280,10 @@ export function ExplorerMap() {
         {pos && gpsMsg && mode === "gps" && (
           <div className="absolute left-2 top-2 bg-ink px-2 py-1 font-pixel text-[9px] text-parchment">{gpsMsg}</div>
         )}
+        <div className="absolute bottom-3 right-3 flex flex-col gap-1">
+          <button className="mc-btn h-9 w-9 font-pixel text-xs" aria-label="Zoom in" onClick={() => setZoom((z) => clampZoom(z * 1.5))}>+</button>
+          <button className="mc-btn h-9 w-9 font-pixel text-xs" aria-label="Zoom out" onClick={() => setZoom((z) => clampZoom(z / 1.5))}>−</button>
+        </div>
         {toast && (
           <div className="absolute inset-x-0 top-3 mx-auto w-fit slot-panel px-4 py-3 animate-in fade-in slide-in-from-top-4">
             <p className="font-pixel text-[10px] text-gold">Achievement get!</p>
