@@ -57,6 +57,8 @@ export function ExplorerMap() {
   const [selected, setSelected] = useState<string | null>(null);
   const [disc, setDisc] = useState<{ name: string; category: Category } | null>(null);
   const discTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [heading, setHeading] = useState(0); // radians, 0 = north, clockwise
+  const lastFix = useRef<{ lat: number; lng: number } | null>(null);
   const [tick, setTick] = useState(0);
   const [achv, setAchv] = useState<number[]>([]);
   const [zoom, setZoom] = useState(1);
@@ -142,6 +144,14 @@ export function ExplorerMap() {
       (p) => {
         const raw = { lat: p.coords.latitude, lng: p.coords.longitude };
         setGpsMsg(distM(raw, CAMPUS_CENTER) > 3000 ? "You're far from USF — try demo walk." : "");
+        // Point the marker where we're heading.
+        const prev = lastFix.current;
+        if (prev) {
+          const a = project(prev.lat, prev.lng), b = project(raw.lat, raw.lng);
+          const ddx = b.x - a.x, ddy = b.y - a.y;
+          if (ddx * ddx + ddy * ddy > 4) setHeading(Math.atan2(ddx, -ddy));
+        }
+        lastFix.current = raw;
         // Never let the marker leave the map, even if the GPS fix is off campus.
         setPos(clampToCampus(raw));
       },
@@ -170,6 +180,7 @@ export function ExplorerMap() {
   }, [mode]);
 
   const step = useCallback((dx: number, dy: number) => {
+    setHeading(Math.atan2(dx, -dy));
     setPos((p) => {
       if (!p) return p;
       const w = project(p.lat, p.lng);
@@ -362,13 +373,17 @@ export function ExplorerMap() {
       const h = 22 * dpr, w = h;
       if (playerImg.complete && playerImg.naturalWidth) {
         ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(playerImg, p.x - w / 2, p.y - h / 2, w, h);
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(heading); // icon points up at rest; rotate to face travel direction
+        ctx.drawImage(playerImg, -w / 2, -h / 2, w, h);
+        ctx.restore();
       } else {
         ctx.fillStyle = ink; ctx.fillRect(p.x - out - dpr, p.y - out - dpr, (out + dpr) * 2, (out + dpr) * 2);
         ctx.fillStyle = marker; ctx.fillRect(p.x - inn - dpr, p.y - inn - dpr, (inn + dpr) * 2, (inn + dpr) * 2);
       }
     }
-  }, [pos, cells, found, tick, zoom, showAll]);
+  }, [pos, cells, found, tick, zoom, showAll, heading]);
 
   const count = Object.keys(found).length;
   return (
