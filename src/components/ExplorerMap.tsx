@@ -64,6 +64,9 @@ export function ExplorerMap() {
   const [zoom, setZoom] = useState(1);
   const [showAll, setShowAll] = useState(false);
   const [drawer, setDrawer] = useState<"progress" | "info" | null>(null);
+  const [pan, setPan] = useState<{ x: number; y: number } | null>(null); // null = follow player
+  const view = useRef({ scale: 1, center: { x: 0, y: 0 } });
+  useEffect(() => { if (zoom <= 1) setPan(null); }, [zoom]);
   const clampZoom = (z: number) => Math.min(8, Math.max(1, z));
   useEffect(() => {
     const el = canvasRef.current;
@@ -76,6 +79,7 @@ export function ExplorerMap() {
     // Two-finger pinch zoom on touch screens.
     const pts = new Map<number, { x: number; y: number }>();
     let lastDist = 0;
+    let drag: { x: number; y: number } | null = null;
     const dist = () => {
       const [a, b] = [...pts.values()];
       return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
@@ -83,6 +87,7 @@ export function ExplorerMap() {
     const onDown = (e: PointerEvent) => {
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pts.size === 2) lastDist = dist();
+      else drag = { x: e.clientX, y: e.clientY };
     };
     const onMove = (e: PointerEvent) => {
       if (!pts.has(e.pointerId)) return;
@@ -92,9 +97,17 @@ export function ExplorerMap() {
         const k = d / lastDist;
         lastDist = d;
         setZoom((z) => clampZoom(z * k));
+        drag = null;
+      } else if (pts.size === 1 && drag) {
+        const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+        drag = { x: e.clientX, y: e.clientY };
+        const { scale, center } = view.current;
+        const next = { x: center.x - dx / scale, y: center.y - dy / scale };
+        view.current.center = next;
+        setPan(next);
       }
     };
-    const onUp = (e: PointerEvent) => { pts.delete(e.pointerId); lastDist = 0; };
+    const onUp = (e: PointerEvent) => { pts.delete(e.pointerId); lastDist = 0; drag = null; };
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("pointermove", onMove);
@@ -246,11 +259,12 @@ export function ExplorerMap() {
 
     const SCALE = Math.max(W / (SE.x - NW.x), H / (SE.y - NW.y)) * zoom;
     // Zoomed in: follow the player, but keep the view inside the campus.
-    const focus = pos ? project(pos.lat, pos.lng) : { x: (NW.x + SE.x) / 2, y: (NW.y + SE.y) / 2 };
+    const focus = pan ?? (pos ? project(pos.lat, pos.lng) : { x: (NW.x + SE.x) / 2, y: (NW.y + SE.y) / 2 });
     const halfW = W / 2 / SCALE, halfH = H / 2 / SCALE;
     const clampAxis = (v: number, lo: number, hi: number, half: number) =>
       hi - lo <= half * 2 ? (lo + hi) / 2 : Math.min(hi - half, Math.max(lo + half, v));
     const center = { x: clampAxis(focus.x, NW.x, SE.x, halfW), y: clampAxis(focus.y, NW.y, SE.y, halfH) };
+    view.current = { scale: SCALE, center };
 
     // Pick the tile zoom whose pixels land closest to 1:1 on screen, so the
     // base map keeps its own detail instead of being crushed down to mush.
@@ -383,7 +397,7 @@ export function ExplorerMap() {
         ctx.fillStyle = marker; ctx.fillRect(p.x - inn - dpr, p.y - inn - dpr, (inn + dpr) * 2, (inn + dpr) * 2);
       }
     }
-  }, [pos, cells, found, tick, zoom, showAll, heading]);
+  }, [pos, cells, found, tick, zoom, showAll, heading, pan]);
 
   const count = Object.keys(found).length;
   return (
@@ -418,6 +432,9 @@ export function ExplorerMap() {
       <div className="absolute bottom-[max(9%,64px)] right-[max(7%,22px)] z-30 flex flex-col gap-1.5">
         <button className="mc-btn h-10 w-10 font-pixel text-sm sm:h-12 sm:w-12" aria-label="Zoom in" onClick={() => setZoom((z) => clampZoom(z * 1.5))}>+</button>
         <button className="mc-btn h-10 w-10 font-pixel text-sm sm:h-12 sm:w-12" aria-label="Zoom out" onClick={() => setZoom((z) => clampZoom(z / 1.5))}>−</button>
+        {pan && (
+          <button className="mc-btn h-10 w-10 text-base sm:h-12 sm:w-12" aria-label="Re-center on me" title="Re-center" onClick={() => setPan(null)}>🎯</button>
+        )}
         <button className="mc-btn h-10 w-10 text-base sm:h-12 sm:w-12" aria-label={mode === "gps" ? "Switch to demo walk" : "Use my location"} title={mode === "gps" ? "Demo walk" : "Use my location"} onClick={() => setMode(mode === "gps" ? "demo" : "gps")}>{mode === "gps" ? "🚶" : "📍"}</button>
       </div>
 
