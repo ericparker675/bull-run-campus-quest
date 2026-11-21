@@ -400,11 +400,11 @@ export function ExplorerMap() {
 
       {/* floating top bar, Google Maps style */}
       <header className={`slot-panel absolute left-1/2 top-[max(3%,14px)] z-30 flex w-[min(86vw,560px)] -translate-x-1/2 items-center gap-2 px-3 py-2 transition-[margin] duration-300 ${drawer ? "sm:ml-36" : ""}`}>
-        <h1 className="min-w-0 truncate font-pixel text-[10px] text-parchment text-shadow-block sm:text-sm">USF Explorer Map</h1>
-        <div className="ml-auto shrink-0 font-pixel text-[8px] text-gold sm:text-[10px]">🗺 {pct.toFixed(0)}% • ⛏ {count}/{LANDMARKS.length}</div>
-        <div className="flex shrink-0 gap-1.5 sm:hidden">
-          <button onClick={() => setDrawer((d) => (d === "progress" ? null : "progress"))} aria-label="Toggle progress panel" className="mc-btn min-h-8 px-2 py-1 font-pixel text-[9px]">🏆</button>
-          <button onClick={() => setDrawer((d) => (d === "info" ? null : "info"))} aria-label="Toggle campus info panel" className="mc-btn min-h-8 px-2 py-1 font-pixel text-[9px]">📖</button>
+        <h1 className="min-w-0 truncate font-pixel text-[9px] text-parchment text-shadow-block sm:text-sm"><span className="sm:hidden">USF Explorer</span><span className="hidden sm:inline">USF Explorer Map</span></h1>
+        <div className="ml-auto shrink-0 font-pixel text-[8px] text-gold sm:text-[10px]">{pct.toFixed(0)}% • {count}/{LANDMARKS.length}</div>
+        <div className="flex shrink-0 gap-1 sm:hidden">
+          <button onClick={() => setDrawer((d) => (d === "progress" ? null : "progress"))} aria-label="Toggle progress panel" className="mc-btn min-h-8 px-1.5 py-1 font-pixel text-[9px]">🏆</button>
+          <button onClick={() => setDrawer((d) => (d === "info" ? null : "info"))} aria-label="Toggle campus info panel" className="mc-btn min-h-8 px-1.5 py-1 font-pixel text-[9px]">📖</button>
         </div>
       </header>
 
