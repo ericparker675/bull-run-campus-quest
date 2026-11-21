@@ -96,8 +96,8 @@ export const LANDMARKS: Landmark[] = [
 export const CAMPUS_CENTER = { lat: 28.0605, lng: -82.4125 };
 export const DISCOVER_RADIUS_M = 45;
 
-// Approximate USF Tampa campus bounds (Fowler Ave to Fletcher Ave, Bruce B Downs to ~50th St).
-export const CAMPUS_BOUNDS = { north: 28.0700, south: 28.0545, west: -82.4250, east: -82.4020 };
+// USF Tampa campus bounds with margin (past Fowler Ave to past Fletcher Ave, past 50th St to past Bruce B Downs).
+export const CAMPUS_BOUNDS = { north: 28.0710, south: 28.0530, west: -82.4280, east: -82.3980 };
 
 export const ACHIEVEMENTS = [
   { pct: 1, title: "First Steps" },
