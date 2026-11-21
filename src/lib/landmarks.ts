@@ -16,3 +16,21 @@ export const LANDMARKS: Landmark[] = [
 
 export const CAMPUS_CENTER = { lat: 28.0605, lng: -82.4125 };
 export const DISCOVER_RADIUS_M = 45;
+
+// Approximate USF Tampa campus bounds (Fowler Ave to Fletcher Ave, Bruce B Downs to ~50th St).
+export const CAMPUS_BOUNDS = { north: 28.0700, south: 28.0545, west: -82.4250, east: -82.4045 };
+
+export const ACHIEVEMENTS = [
+  { pct: 1, title: "First Steps" },
+  { pct: 5, title: "Curious Bull" },
+  { pct: 10, title: "Wanderer" },
+  { pct: 25, title: "Trailblazer" },
+  { pct: 50, title: "Cartographer" },
+  { pct: 75, title: "Campus Legend" },
+  { pct: 100, title: "Master Explorer" },
+];
+
+/** Achievements newly earned when exploration goes from `before`% to `after`%. */
+export function newlyEarned(before: number, after: number) {
+  return ACHIEVEMENTS.filter((a) => before < a.pct && after >= a.pct);
+}

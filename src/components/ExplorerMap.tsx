@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { LANDMARKS, CAMPUS_CENTER, DISCOVER_RADIUS_M, type Landmark } from "@/lib/landmarks";
+import { LANDMARKS, CAMPUS_CENTER, CAMPUS_BOUNDS, ACHIEVEMENTS, newlyEarned, DISCOVER_RADIUS_M, type Landmark } from "@/lib/landmarks";
 import { describeLandmark } from "@/lib/discover.functions";
 
 const Z = 17;
 const CELL = 8; // world px per fog cell (~8.5m)
-const REVEAL_PX = 50; // reveal radius in world px (~52m)
-const SCALE = 2; // screen px per world px
-const PIXEL = 4; // pixelation factor
+const REVEAL_PX = 70; // reveal radius in world px (~74m)
+const PIXEL = 2; // pixelation factor
 const STORE = "usf-explorer-v1";
 
 function project(lat: number, lng: number) {
@@ -29,6 +28,20 @@ function distM(a: { lat: number; lng: number }, b: { lat: number; lng: number })
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
+const NW = project(CAMPUS_BOUNDS.north, CAMPUS_BOUNDS.west);
+const SE = project(CAMPUS_BOUNDS.south, CAMPUS_BOUNDS.east);
+const C0X = Math.floor(NW.x / CELL), C0Y = Math.floor(NW.y / CELL);
+const C1X = Math.floor(SE.x / CELL), C1Y = Math.floor(SE.y / CELL);
+const TOTAL_CELLS = (C1X - C0X + 1) * (C1Y - C0Y + 1);
+function explorePct(cells: Set<string>) {
+  let n = 0;
+  cells.forEach((k) => {
+    const [i, j] = k.split(",").map(Number) as [number, number];
+    if (i >= C0X && i <= C1X && j >= C0Y && j <= C1Y) n++;
+  });
+  return (n / TOTAL_CELLS) * 100;
+}
+
 const tiles = new Map<string, HTMLImageElement>();
 function tile(tx: number, ty: number, onload: () => void) {
   const k = `${tx}/${ty}`;
@@ -42,7 +55,7 @@ function tile(tx: number, ty: number, onload: () => void) {
   return img.complete && img.naturalWidth ? img : null;
 }
 
-type Saved = { cells: string[]; found: Record<string, string> };
+type Saved = { cells: string[]; found: Record<string, string>; achv?: number[] };
 
 export function ExplorerMap() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -53,19 +66,34 @@ export function ExplorerMap() {
   const [found, setFound] = useState<Record<string, string>>({});
   const [popup, setPopup] = useState<{ lm: Landmark; text: string; loading: boolean; error?: string } | null>(null);
   const [tick, setTick] = useState(0);
+  const [achv, setAchv] = useState<number[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
   const loaded = useRef(false);
 
   useEffect(() => {
     try {
       const s: Saved = JSON.parse(localStorage.getItem(STORE) || "null");
-      if (s) { setCells(new Set(s.cells)); setFound(s.found); }
+      if (s) { setCells(new Set(s.cells)); setFound(s.found); setAchv(s.achv ?? []); }
     } catch { /* ignore */ }
     loaded.current = true;
   }, []);
   useEffect(() => {
     if (!loaded.current) return;
-    localStorage.setItem(STORE, JSON.stringify({ cells: [...cells], found }));
-  }, [cells, found]);
+    localStorage.setItem(STORE, JSON.stringify({ cells: [...cells], found, achv }));
+  }, [cells, found, achv]);
+
+  const pct = explorePct(cells);
+  useEffect(() => {
+    if (!loaded.current) return;
+    const best = Math.max(0, ...achv);
+    const earned = newlyEarned(best, pct);
+    if (earned.length) {
+      setAchv((a) => [...a, ...earned.map((e) => e.pct)]);
+      const top = earned[earned.length - 1]!;
+      setToast(`${top.title} — explored ${top.pct}% of campus!`);
+      setTimeout(() => setToast(null), 5000);
+    }
+  }, [pct]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // GPS
   useEffect(() => {
@@ -105,7 +133,7 @@ export function ExplorerMap() {
     setPos((p) => {
       if (!p) return p;
       const w = project(p.lat, p.lng);
-      return unproject(w.x + dx * 6, w.y + dy * 6);
+      return unproject(w.x + dx * 12, w.y + dy * 12);
     });
   }, []);
 
@@ -151,7 +179,8 @@ export function ExplorerMap() {
     const marker = css.getPropertyValue("--marker").trim();
     const gold = css.getPropertyValue("--gold").trim();
 
-    const center = project((pos ?? CAMPUS_CENTER).lat, (pos ?? CAMPUS_CENTER).lng);
+    const center = { x: (NW.x + SE.x) / 2, y: (NW.y + SE.y) / 2 };
+    const SCALE = Math.min(W / (SE.x - NW.x), H / (SE.y - NW.y));
     const s = SCALE / PIXEL;
     const sw = Math.ceil(W / PIXEL), sh = Math.ceil(H / PIXEL);
     const off = document.createElement("canvas");
@@ -180,9 +209,9 @@ export function ExplorerMap() {
     ctx.drawImage(off, 0, 0, sw * PIXEL, sh * PIXEL);
     // fog texture
     ctx.fillStyle = fogDot;
-    for (let y = 0; y < H; y += 16) for (let x = (y / 16) % 2 ? 8 : 0; x < W; x += 16) {
+    for (let y = 0; y < H; y += 12) for (let x = (y / 12) % 2 ? 6 : 0; x < W; x += 12) {
       const wx = Math.floor((center.x + (x - W / 2) / SCALE) / CELL), wy = Math.floor((center.y + (y - H / 2) / SCALE) / CELL);
-      if (!cells.has(`${wx},${wy}`)) ctx.fillRect(x, y, 4, 4);
+      if (!cells.has(`${wx},${wy}`)) ctx.fillRect(x, y, 3, 3);
     }
 
     const toScreen = (lat: number, lng: number) => {
@@ -197,18 +226,18 @@ export function ExplorerMap() {
       const k = `${Math.floor(project(lm.lat, lm.lng).x / CELL)},${Math.floor(project(lm.lat, lm.lng).y / CELL)}`;
       if (!cells.has(k)) continue;
       const done = found[lm.id] !== undefined;
-      ctx.fillStyle = ink; ctx.fillRect(p.x - 10, p.y - 10, 20, 20);
-      ctx.fillStyle = done ? gold : fog; ctx.fillRect(p.x - 6, p.y - 6, 12, 12);
-      ctx.font = "10px 'Press Start 2P', monospace";
+      ctx.fillStyle = ink; ctx.fillRect(p.x - 7, p.y - 7, 14, 14);
+      ctx.fillStyle = done ? gold : fog; ctx.fillRect(p.x - 4, p.y - 4, 8, 8);
+      ctx.font = "8px 'Press Start 2P', monospace";
       const tw = ctx.measureText(lm.code).width;
-      ctx.fillStyle = ink; ctx.fillRect(p.x - tw / 2 - 4, p.y - 30, tw + 8, 16);
-      ctx.fillStyle = fog; ctx.fillText(lm.code, p.x, p.y - 18);
+      ctx.fillStyle = ink; ctx.fillRect(p.x - tw / 2 - 3, p.y - 23, tw + 6, 13);
+      ctx.fillStyle = fog; ctx.fillText(lm.code, p.x, p.y - 13);
     }
     // player: white pointer like minecraft
     if (pos) {
-      const p = { x: W / 2, y: H / 2 };
-      ctx.fillStyle = ink; ctx.fillRect(p.x - 9, p.y - 9, 18, 18);
-      ctx.fillStyle = marker; ctx.fillRect(p.x - 6, p.y - 6, 12, 12);
+      const p = toScreen(pos.lat, pos.lng);
+      ctx.fillStyle = ink; ctx.fillRect(p.x - 7, p.y - 7, 14, 14);
+      ctx.fillStyle = marker; ctx.fillRect(p.x - 4, p.y - 4, 8, 8);
     }
   }, [pos, cells, found, tick]);
 
@@ -217,7 +246,10 @@ export function ExplorerMap() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-3 sm:p-6">
       <header className="flex w-full max-w-3xl items-center justify-between gap-2">
         <h1 className="font-pixel text-sm text-foreground text-shadow-block sm:text-lg">USF Explorer Map</h1>
-        <div className="font-pixel text-[10px] text-foreground sm:text-xs">⛏ {count}/{LANDMARKS.length} found</div>
+        <div className="text-right font-pixel text-[10px] leading-5 text-foreground sm:text-xs">
+          <div>🗺 {pct.toFixed(1)}% explored</div>
+          <div>⛏ {count}/{LANDMARKS.length} found</div>
+        </div>
       </header>
 
       <div className="map-frame relative aspect-[4/5] w-full max-w-3xl sm:aspect-[4/3]">
@@ -229,6 +261,12 @@ export function ExplorerMap() {
         )}
         {pos && gpsMsg && mode === "gps" && (
           <div className="absolute left-2 top-2 bg-ink px-2 py-1 font-pixel text-[9px] text-parchment">{gpsMsg}</div>
+        )}
+        {toast && (
+          <div className="absolute inset-x-0 top-3 mx-auto w-fit slot-panel px-4 py-3 animate-in fade-in slide-in-from-top-4">
+            <p className="font-pixel text-[10px] text-gold">Achievement get!</p>
+            <p className="mt-2 font-pixel text-[10px] text-parchment">{toast}</p>
+          </div>
         )}
         {popup && (
           <div className="absolute inset-x-3 bottom-3 slot-panel p-4 animate-in fade-in slide-in-from-bottom-4">
@@ -264,6 +302,17 @@ export function ExplorerMap() {
         })}
       </div>
 
+      <div className="flex w-full max-w-3xl flex-wrap justify-center gap-1">
+        {ACHIEVEMENTS.map((a) => {
+          const got = achv.includes(a.pct);
+          return (
+            <div key={a.pct} title={`Explore ${a.pct}% of campus`} className={`slot-panel px-2 py-1 font-pixel text-[8px] ${got ? "text-gold" : "text-parchment/40"}`}>
+              {got ? "★" : "☆"} {a.title} · {a.pct}%
+            </div>
+          );
+        })}
+      </div>
+
       <div className="flex flex-wrap items-center justify-center gap-2">
         <button onClick={() => setMode(mode === "gps" ? "demo" : "gps")} className="mc-btn px-4 py-2 font-pixel text-[10px]">
           {mode === "gps" ? "Demo walk" : "Use my location"}
@@ -277,7 +326,7 @@ export function ExplorerMap() {
           </div>
         )}
         <button
-          onClick={() => { if (confirm("Erase your explored map?")) { setCells(new Set()); setFound({}); } }}
+          onClick={() => { if (confirm("Erase your explored map?")) { setCells(new Set()); setFound({}); setAchv([]); } }}
           className="mc-btn px-4 py-2 font-pixel text-[10px]"
         >Reset map</button>
       </div>
