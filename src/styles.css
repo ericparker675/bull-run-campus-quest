@@ -129,7 +129,7 @@
 @utility text-shadow-block { text-shadow: 3px 3px 0 var(--ink); }
 @utility map-frame {
   isolation: isolate;
-  padding: 3% 8%;
+  padding: 13% 22%;
   background: var(--frame);
   &::before {
     content: "";
