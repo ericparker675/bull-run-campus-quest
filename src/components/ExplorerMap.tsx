@@ -56,6 +56,7 @@ export function ExplorerMap() {
   const [achv, setAchv] = useState<number[]>([]);
   const [zoom, setZoom] = useState(1);
   const [showAll, setShowAll] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const clampZoom = (z: number) => Math.min(8, Math.max(1, z));
   useEffect(() => {
     const el = canvasRef.current;
@@ -427,49 +428,71 @@ export function ExplorerMap() {
           className="mc-btn min-h-12 px-4 py-3 font-pixel text-[10px]"
         >Reset map</button>
       </div>
-      {/* category legend: colour-coded pixel badges */}
-      <div className="flex w-full max-w-3xl flex-wrap justify-center gap-2">
-        {CATEGORY_ORDER.map((c) => {
-          const m = CATEGORY_META[c];
-          const inCat = LANDMARKS.filter((l) => l.category === c);
-          const got = inCat.filter((l) => found[l.id] !== undefined).length;
-          return (
-            <div key={c} className={`slot-panel flex items-center gap-2 px-2 py-1 font-pixel text-[8px] ${BADGE_TEXT[c]}`}>
-              <span className="inline-block h-3 w-3 border-2 border-ink" style={{ background: `var(${m.cssVar})` }} aria-hidden />
-              <span>{m.emoji} {m.label} {got}/{inCat.length}</span>
-            </div>
-          );
-        })}
-      </div>
+      {/* left-side curtain: legend, landmark hotbar, achievements */}
+      <div className="fixed left-0 top-1/2 z-40 flex -translate-y-1/2 items-start">
+        <div
+          className={`max-h-[85vh] w-64 overflow-y-auto transition-transform duration-300 ease-out sm:w-72 ${
+            drawerOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+          aria-hidden={!drawerOpen}
+        >
+          <div className="slot-panel m-2 flex flex-col gap-3 p-3">
+            <p className="font-pixel text-[10px] text-gold">🏆 Progress</p>
 
-      {/* hotbar of landmarks */}
-      <div className="flex w-full max-w-3xl flex-wrap justify-center gap-1">
-        {LANDMARKS.map((lm) => {
-          const done = found[lm.id] !== undefined;
-          return (
-            <button
-              key={lm.id}
-              title={done ? lm.name : "Not yet discovered"}
-              disabled={!done}
-              onClick={() => setPopup({ lm, text: found[lm.id] ?? "", loading: false, ...(found[lm.id] ? {} : { error: "No facts saved for this one." }) })}
-              style={done ? { borderColor: `var(${CATEGORY_META[lm.category].cssVar})` } : undefined}
-              className={`hotbar-slot font-pixel text-[9px] ${BADGE_TEXT[lm.category]} ${done ? "" : "opacity-40"}`}
-            >
-              {done ? lm.code : "?"}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="flex w-full max-w-3xl flex-wrap justify-center gap-1">
-        {ACHIEVEMENTS.map((a) => {
-          const got = achv.includes(a.pct);
-          return (
-            <div key={a.pct} title={`Explore ${a.pct}% of campus`} className={`slot-panel px-2 py-1 font-pixel text-[8px] ${got ? "text-gold" : "text-parchment/40"}`}>
-              {got ? "★" : "☆"} {a.title} · {a.pct}%
+            {/* category legend: colour-coded pixel badges */}
+            <div className="flex flex-col gap-2">
+              {CATEGORY_ORDER.map((c) => {
+                const m = CATEGORY_META[c];
+                const inCat = LANDMARKS.filter((l) => l.category === c);
+                const got = inCat.filter((l) => found[l.id] !== undefined).length;
+                return (
+                  <div key={c} className={`slot-panel flex items-center gap-2 px-2 py-1 font-pixel text-[8px] ${BADGE_TEXT[c]}`}>
+                    <span className="inline-block h-3 w-3 border-2 border-ink" style={{ background: `var(${m.cssVar})` }} aria-hidden />
+                    <span>{m.emoji} {m.label} {got}/{inCat.length}</span>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+
+            {/* hotbar of landmarks */}
+            <div className="flex flex-wrap gap-1">
+              {LANDMARKS.map((lm) => {
+                const done = found[lm.id] !== undefined;
+                return (
+                  <button
+                    key={lm.id}
+                    title={done ? lm.name : "Not yet discovered"}
+                    disabled={!done}
+                    onClick={() => setPopup({ lm, text: found[lm.id] ?? "", loading: false, ...(found[lm.id] ? {} : { error: "No facts saved for this one." }) })}
+                    style={done ? { borderColor: `var(${CATEGORY_META[lm.category].cssVar})` } : undefined}
+                    className={`hotbar-slot font-pixel text-[9px] ${BADGE_TEXT[lm.category]} ${done ? "" : "opacity-40"}`}
+                  >
+                    {done ? lm.code : "?"}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              {ACHIEVEMENTS.map((a) => {
+                const got = achv.includes(a.pct);
+                return (
+                  <div key={a.pct} title={`Explore ${a.pct}% of campus`} className={`slot-panel px-2 py-1 font-pixel text-[8px] ${got ? "text-gold" : "text-parchment/40"}`}>
+                    {got ? "★" : "☆"} {a.title} · {a.pct}%
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => setDrawerOpen((o) => !o)}
+          aria-expanded={drawerOpen}
+          aria-label={drawerOpen ? "Close progress panel" : "Open progress panel"}
+          className="mc-btn mt-24 flex h-24 w-10 items-center justify-center rounded-l-none font-pixel text-[10px]"
+        >
+          {drawerOpen ? "◀" : "🏆"}
+        </button>
       </div>
 
       <p className="max-w-md text-center text-lg text-muted-foreground">
