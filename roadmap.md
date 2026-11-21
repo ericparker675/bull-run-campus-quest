@@ -1,5 +1,6 @@
 # Roadmap
 
-- [x] Keep the location marker on the map — clamp GPS and demo-walk positions to the campus bounds.
-- [x] Add 12 real USF Tampa landmarks in three color-coded categories (Safety = blue, Sustainability = green, Essentials = gold), hidden in the fog until explored.
-- [x] Player icon swapped to uploaded image
+- [x] Campus info tab below Progress tab; remove map-covering popup
+- [x] Swap player marker to uploaded transparent PNG
+- [ ] Minecraft "Advancement Made!" toast top-right on discovery (category icon, slide-in, 3.5s auto-dismiss, tap to close)
+- [ ] Mobile layout: 100dvh, no horizontal scroll, tidy top bar, square responsive map frame, thumb-friendly tab buttons off the map, neat bottom control row

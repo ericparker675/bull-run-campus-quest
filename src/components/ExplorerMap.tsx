@@ -1,6 +1,6 @@
 import playerIcon from "@/assets/player-icon.png.asset.json";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { LANDMARKS, CAMPUS_CENTER, CAMPUS_BOUNDS, ACHIEVEMENTS, newlyEarned, DISCOVER_RADIUS_M, CATEGORY_META, CATEGORY_ORDER, type Landmark, type Category } from "@/lib/landmarks";
+import { LANDMARKS, CAMPUS_CENTER, CAMPUS_BOUNDS, ACHIEVEMENTS, newlyEarned, DISCOVER_RADIUS_M, CATEGORY_META, CATEGORY_ORDER, type Category } from "@/lib/landmarks";
 import { describeLandmark } from "@/lib/discover.functions";
 import { Z, project, unproject, distM, clampToCampus } from "@/lib/geo";
 
@@ -54,12 +54,14 @@ export function ExplorerMap() {
   const [gpsMsg, setGpsMsg] = useState("Looking for your location…");
   const [cells, setCells] = useState<Set<string>>(new Set());
   const [found, setFound] = useState<Record<string, string>>({});
-  const [popup, setPopup] = useState<{ lm: Landmark; text: string; loading: boolean; error?: string } | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [disc, setDisc] = useState<{ name: string; category: Category } | null>(null);
+  const discTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tick, setTick] = useState(0);
   const [achv, setAchv] = useState<number[]>([]);
   const [zoom, setZoom] = useState(1);
   const [showAll, setShowAll] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawer, setDrawer] = useState<"progress" | "info" | null>(null);
   const clampZoom = (z: number) => Math.min(8, Math.max(1, z));
   useEffect(() => {
     const el = canvasRef.current;
@@ -196,14 +198,15 @@ export function ExplorerMap() {
         // Curated facts (safety / eco / essentials) show instantly; Claude adds the rest.
         const seed = lm.fact ?? "";
         setFound((f) => ({ ...f, [lm.id]: seed }));
-        setPopup({ lm, text: seed, loading: !seed });
+        setDisc({ name: lm.name, category: lm.category });
+        if (discTimer.current) clearTimeout(discTimer.current);
+        discTimer.current = setTimeout(() => setDisc(null), 3500);
         describeLandmark({ data: { name: lm.name, code: lm.code } })
           .then((r) => {
             const text = seed && r.text ? `${seed}\n\n${r.text}` : seed || r.text;
             setFound((f) => ({ ...f, [lm.id]: text }));
-            setPopup((p) => p?.lm.id === lm.id ? { lm, text, loading: false, ...(r.error && !seed ? { error: r.error } : {}) } : p);
           })
-          .catch(() => setPopup((p) => p?.lm.id === lm.id ? { ...p, loading: false, ...(seed ? {} : { error: "Couldn't fetch building facts right now." }) } : p));
+          .catch(() => { /* keep the curated fact line */ });
       }
     }
   }, [pos]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -356,7 +359,7 @@ export function ExplorerMap() {
     // player: white pointer like minecraft
     if (pos) {
       const p = toScreen(pos.lat, pos.lng);
-      const h = 22 * dpr, w = h * (100 / 140);
+      const h = 22 * dpr, w = h;
       if (playerImg.complete && playerImg.naturalWidth) {
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(playerImg, p.x - w / 2, p.y - h / 2, w, h);
@@ -369,17 +372,21 @@ export function ExplorerMap() {
 
   const count = Object.keys(found).length;
   return (
-    <div className={`mc-world flex min-h-screen flex-col items-center justify-center gap-4 p-3 transition-[padding] duration-300 ease-out sm:p-6 ${drawerOpen ? "pl-14 sm:pl-80" : ""}`}>
-      <header className="flex w-full max-w-3xl items-center justify-between gap-2">
-        <h1 className="font-pixel text-sm text-foreground text-shadow-block sm:text-lg">USF Explorer Map</h1>
-        <div className="text-right font-pixel text-[10px] leading-5 text-foreground sm:text-xs">
+    <div className={`mc-world flex min-h-[100dvh] flex-col items-center justify-center gap-4 overflow-x-hidden p-3 transition-[padding] duration-300 ease-out sm:p-6 ${drawer ? "pl-14 sm:pl-80" : ""}`}>
+      <header className="grid w-full max-w-[460px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+        <h1 className="truncate font-pixel text-xs text-foreground text-shadow-block sm:text-lg">USF Explorer Map</h1>
+        <div className="text-right font-pixel text-[9px] leading-4 text-foreground sm:text-xs sm:leading-5">
           <div>🗺 {pct.toFixed(1)}% explored</div>
           <div>⛏ {count}/{LANDMARKS.length} found</div>
         </div>
+        <div className="col-span-2 flex gap-2 sm:hidden">
+          <button onClick={() => setDrawer((d) => (d === "progress" ? null : "progress"))} className="mc-btn min-h-10 flex-1 px-2 py-2 font-pixel text-[9px]">🏆 Progress</button>
+          <button onClick={() => setDrawer((d) => (d === "info" ? null : "info"))} className="mc-btn min-h-10 flex-1 px-2 py-2 font-pixel text-[9px]">📖 Campus info</button>
+        </div>
       </header>
 
-      <div className="w-full max-w-3xl [perspective:1100px]">
-      <div className="map-frame map-held relative aspect-[4/5] w-full sm:aspect-[4/3]">
+      <div className="w-[92vw] max-w-[460px]">
+      <div className="map-frame map-held relative aspect-square w-full">
         <canvas ref={canvasRef} className="h-full w-full touch-none" aria-label="Explored campus map" />
         {!pos && (
           <div className="absolute inset-0 grid place-items-center p-6 text-center font-pixel text-xs text-ink">
@@ -399,27 +406,29 @@ export function ExplorerMap() {
             <p className="mt-2 font-pixel text-[10px] text-parchment">{toast}</p>
           </div>
         )}
-        {popup && (
-          <div className="absolute inset-x-[5%] bottom-[11%] z-20 slot-panel p-4 animate-in fade-in slide-in-from-bottom-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-pixel text-[10px] text-gold">New landmark discovered!</p>
-                <p className="mt-2 font-pixel text-xs text-parchment">{popup.lm.name}</p>
-              </div>
-              <button onClick={() => setPopup(null)} className="mc-btn h-10 w-10 shrink-0 font-pixel text-[10px]" aria-label="Close">X</button>
-            </div>
-            <p className="mt-3 whitespace-pre-line text-xl leading-tight text-parchment">
-              {popup.loading ? "Consulting the campus guide…" : popup.error ?? popup.text}
-            </p>
-          </div>
-        )}
       </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <button onClick={() => setMode(mode === "gps" ? "demo" : "gps")} className="mc-btn min-h-12 px-4 py-3 font-pixel text-[10px]">
-          {mode === "gps" ? "Demo walk" : "Use my location"}
+      {disc && (
+        <button
+          onClick={() => setDisc(null)}
+          aria-label="Dismiss advancement"
+          className="advancement-toast fixed right-4 top-4 z-50 flex max-w-[70vw] items-center gap-3 px-3 py-2 text-left animate-in fade-in slide-in-from-right-8 duration-300"
+        >
+          <span
+            className="grid h-10 w-10 shrink-0 place-items-center border-2 border-ink text-xl"
+            style={{ background: `var(${CATEGORY_META[disc.category].cssVar})` }}
+          >
+            {CATEGORY_META[disc.category].emoji}
+          </span>
+          <span className="min-w-0">
+            <span className="block font-pixel text-[9px] text-gold">Advancement Made!</span>
+            <span className="mt-1 block truncate font-pixel text-[9px] text-parchment">{disc.name}</span>
+          </span>
         </button>
+      )}
+
+      <div className="flex w-full max-w-[460px] flex-col items-center gap-3">
         {mode === "demo" && (
           <div className="grid grid-cols-3 gap-2">
             <span /><button className="mc-btn h-14 w-14 text-xl" onClick={() => step(0, -1)} aria-label="North">▲</button><span />
@@ -428,26 +437,80 @@ export function ExplorerMap() {
             <button className="mc-btn h-14 w-14 text-xl" onClick={() => step(1, 0)} aria-label="East">▶</button>
           </div>
         )}
-        <button
-          onClick={() => setShowAll((s) => !s)}
-          className="mc-btn min-h-12 px-4 py-3 font-pixel text-[10px]"
-        >{showAll ? "Hide map" : "Reveal map"}</button>
-        <button
-          onClick={() => { if (confirm("Erase your explored map?")) { setCells(new Set()); setFound({}); setAchv([]); } }}
-          className="mc-btn min-h-12 px-4 py-3 font-pixel text-[10px]"
-        >Reset map</button>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button onClick={() => setMode(mode === "gps" ? "demo" : "gps")} className="mc-btn min-h-10 px-4 py-2 font-pixel text-[10px]">
+            {mode === "gps" ? "Demo walk" : "Use my location"}
+          </button>
+          <button
+            onClick={() => setShowAll((s) => !s)}
+            className="mc-btn min-h-10 px-4 py-2 font-pixel text-[10px]"
+          >{showAll ? "Hide map" : "Reveal map"}</button>
+          <button
+            onClick={() => { if (confirm("Erase your explored map?")) { setCells(new Set()); setFound({}); setAchv([]); } }}
+            className="mc-btn min-h-10 px-4 py-2 font-pixel text-[10px]"
+          >Reset map</button>
+        </div>
       </div>
-      {/* left-side curtain: legend, landmark hotbar, achievements */}
-      <div className="fixed left-0 top-1/2 z-40 flex -translate-y-1/2 items-start">
+      {/* left-side curtain: progress + campus info tabs */}
+      <div className="pointer-events-none fixed left-0 top-1/2 z-40 flex -translate-y-1/2 items-start">
         <div
-          className={`max-h-[85vh] w-64 overflow-y-auto transition-transform duration-300 ease-out sm:w-72 ${
-            drawerOpen ? "translate-x-0" : "-translate-x-full"
+          className={`pointer-events-auto max-h-[85vh] w-64 overflow-y-auto transition-transform duration-300 ease-out sm:w-72 ${
+            drawer ? "translate-x-0" : "-translate-x-full"
           }`}
-          aria-hidden={!drawerOpen}
+          aria-hidden={drawer === null}
         >
           <div className="slot-panel m-2 flex flex-col gap-3 p-3">
-            <p className="font-pixel text-[10px] text-gold">🏆 Progress</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDrawer("progress")}
+                className={`mc-btn flex-1 px-2 py-2 font-pixel text-[8px] ${drawer === "progress" ? "" : "opacity-60"}`}
+              >🏆 Progress</button>
+              <button
+                onClick={() => setDrawer("info")}
+                className={`mc-btn flex-1 px-2 py-2 font-pixel text-[8px] ${drawer === "info" ? "" : "opacity-60"}`}
+              >📖 Campus info</button>
+            </div>
 
+            {drawer === "info" ? (
+              (() => {
+                const discovered = LANDMARKS.filter((l) => found[l.id] !== undefined);
+                const sel = discovered.find((l) => l.id === selected);
+                if (sel) {
+                  return (
+                    <div className="flex flex-col gap-2">
+                      <button onClick={() => setSelected(null)} className="mc-btn self-start px-2 py-1 font-pixel text-[8px]">◀ Back</button>
+                      <p className={`font-pixel text-[10px] ${BADGE_TEXT[sel.category]}`}>
+                        {CATEGORY_META[sel.category].emoji} {sel.name}
+                      </p>
+                      <p className="whitespace-pre-line text-base leading-snug text-parchment">
+                        {found[sel.id] || "Consulting the campus guide…"}
+                      </p>
+                    </div>
+                  );
+                }
+                if (!discovered.length) {
+                  return (
+                    <p className="font-pixel text-[9px] leading-5 text-parchment/60">
+                      Nothing discovered yet. Walk around campus to uncover places, then read about them here.
+                    </p>
+                  );
+                }
+                return (
+                  <div className="flex flex-col gap-1">
+                    {discovered.map((l) => (
+                      <button
+                        key={l.id}
+                        onClick={() => setSelected(l.id)}
+                        className={`slot-panel px-2 py-2 text-left font-pixel text-[9px] ${BADGE_TEXT[l.category]}`}
+                      >
+                        {CATEGORY_META[l.category].emoji} {l.name}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()
+            ) : (
+            <>
             {/* category legend: colour-coded pixel badges */}
             <div className="flex flex-col gap-2">
               {CATEGORY_ORDER.map((c) => {
@@ -472,7 +535,7 @@ export function ExplorerMap() {
                     key={lm.id}
                     title={done ? lm.name : "Not yet discovered"}
                     disabled={!done}
-                    onClick={() => setPopup({ lm, text: found[lm.id] ?? "", loading: false, ...(found[lm.id] ? {} : { error: "No facts saved for this one." }) })}
+                    onClick={() => { setSelected(lm.id); setDrawer("info"); }}
                     style={done ? { borderColor: `var(${CATEGORY_META[lm.category].cssVar})` } : undefined}
                     className={`hotbar-slot font-pixel text-[9px] ${BADGE_TEXT[lm.category]} ${done ? "" : "opacity-40"}`}
                   >
@@ -492,17 +555,30 @@ export function ExplorerMap() {
                 );
               })}
             </div>
+            </>
+            )}
           </div>
         </div>
-        <button
-          onClick={() => setDrawerOpen((o) => !o)}
-          aria-expanded={drawerOpen}
-          aria-label={drawerOpen ? "Close progress panel" : "Open progress panel"}
-          className={`mc-btn mt-2 flex h-56 w-10 flex-col items-center justify-center gap-2 rounded-l-none font-pixel text-[10px] transition-[margin] duration-300 ease-out ${drawerOpen ? "" : "-ml-64 sm:-ml-72"}`}
-        >
-          <span>{drawerOpen ? "◀" : "🏆"}</span>
-          <span className="[writing-mode:vertical-rl] text-[8px] tracking-widest">PROGRESS</span>
-        </button>
+        <div className={`pointer-events-auto mt-2 hidden flex-col gap-2 transition-[margin] duration-300 ease-out sm:flex ${drawer ? "" : "-ml-64 sm:-ml-72"}`}>
+          <button
+            onClick={() => setDrawer((d) => (d === "progress" ? null : "progress"))}
+            aria-expanded={drawer === "progress"}
+            aria-label="Toggle progress panel"
+            className="mc-btn flex h-40 w-10 flex-col items-center justify-center gap-2 rounded-l-none font-pixel text-[10px]"
+          >
+            <span>🏆</span>
+            <span className="[writing-mode:vertical-rl] text-[8px] tracking-widest">PROGRESS</span>
+          </button>
+          <button
+            onClick={() => setDrawer((d) => (d === "info" ? null : "info"))}
+            aria-expanded={drawer === "info"}
+            aria-label="Toggle campus info panel"
+            className="mc-btn flex h-40 w-10 flex-col items-center justify-center gap-2 rounded-l-none font-pixel text-[10px]"
+          >
+            <span>📖</span>
+            <span className="[writing-mode:vertical-rl] text-[8px] tracking-widest">CAMPUS INFO</span>
+          </button>
+        </div>
       </div>
 
       <p className="max-w-md text-center text-lg text-muted-foreground">

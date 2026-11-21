@@ -111,6 +111,7 @@
   --frame: oklch(0.72 0.08 75);
   --stone: oklch(0.55 0.005 0);
   --slot: oklch(0.3 0.01 60 / 0.85);
+  --charcoal: oklch(0.27 0.01 60);
 }
 
 @theme inline {
@@ -170,6 +171,11 @@
   &:active { box-shadow: inset -2px -2px 0 oklch(1 0 0 / 0.35), inset 2px 2px 0 oklch(0 0 0 / 0.35); }
 }
 
+@utility advancement-toast {
+  background: var(--charcoal);
+  border: 3px solid var(--ink);
+  box-shadow: inset 2px 2px 0 oklch(0.78 0.01 60 / 0.55), inset -2px -2px 0 oklch(0 0 0 / 0.5), 4px 4px 0 oklch(0 0 0 / 0.3);
+}
 @utility mc-world {
   background-color: oklch(0.55 0.12 80);
   background-image: url(/mc-sunset.gif);
