@@ -1,7 +1,8 @@
 import playerIcon from "@/assets/player-icon.png.asset.json";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { LANDMARKS, CAMPUS_CENTER, CAMPUS_BOUNDS, ACHIEVEMENTS, newlyEarned, dropsLoot, DISCOVER_RADIUS_M, CATEGORY_META, CATEGORY_ORDER, type Category } from "@/lib/landmarks";
-import { rollLoot, type Rarity } from "@/lib/loot";
+import { rollLoot, CHEST_FOR, CHEST_LABEL, CHEST_ORDER, type Rarity } from "@/lib/loot";
+import { PixelChest } from "@/components/PixelChest";
 import { describeLandmark } from "@/lib/discover.functions";
 import { Z, project, unproject, distM, clampToCampus } from "@/lib/geo";
 
@@ -559,25 +560,38 @@ export function ExplorerMap() {
         <button className="mc-btn h-10 w-10 text-base sm:h-12 sm:w-12" aria-label={mode === "gps" ? "Switch to demo walk" : "Use my location"} title={mode === "gps" ? "Demo walk" : "Use my location"} onClick={() => setMode(mode === "gps" ? "demo" : "gps")}>{mode === "gps" ? "🚶" : "📍"}</button>
       </div>
 
-      {chest && (
-        <div className="absolute inset-0 z-50 grid place-items-center bg-ink/60 p-6">
-          <div className="slot-panel flex w-full max-w-xs flex-col items-center gap-3 p-4 text-center">
-            <p className="font-pixel text-[9px] text-gold">Loot chest found!</p>
-            <p className="font-pixel text-[8px] leading-4 text-parchment/70">{chest.item.from}</p>
-            {chest.open ? (
-              <>
-                <div className="text-5xl animate-in zoom-in duration-300">{chest.item.emoji}</div>
-                <p className={`font-pixel text-[10px] uppercase ${RARITY_CLASS[chest.item.rarity]}`}>{chest.item.rarity}</p>
-                <p className="font-pixel text-[10px] text-parchment">{chest.item.name}</p>
-                <button onClick={() => setChest(null)} className="mc-btn min-h-10 px-4 font-pixel text-[9px]">Collect</button>
-              </>
-            ) : (
-              <button onClick={() => setChest((c) => c && { ...c, open: true })} aria-label="Open chest" className="text-6xl animate-bounce">🧰</button>
-            )}
-            {!chest.open && <p className="font-pixel text-[8px] text-parchment/70">Tap to open</p>}
-          </div>
-        </div>
-      )}
+      {chest &&
+        (() => {
+          const kind = CHEST_FOR[chest.item.rarity];
+          return (
+            <div className="absolute inset-0 z-50 grid place-items-center bg-ink/60 p-6">
+              <div className="slot-panel flex w-full max-w-xs flex-col items-center gap-3 p-4 text-center">
+                <p className="font-pixel text-[9px] text-gold">{CHEST_LABEL[kind]} found!</p>
+                <p className="font-pixel text-[8px] leading-4 text-parchment/70">{chest.item.from}</p>
+                {chest.open ? (
+                  <>
+                    <div className="text-5xl animate-in zoom-in duration-300">{chest.item.emoji}</div>
+                    <p className={`font-pixel text-[10px] uppercase ${RARITY_CLASS[chest.item.rarity]}`}>{chest.item.rarity}</p>
+                    <p className="font-pixel text-[10px] text-parchment">{chest.item.name}</p>
+                    <p className="flex items-center gap-1.5 font-pixel text-[8px] text-parchment/70">
+                      <PixelChest kind={kind} size={14} /> {CHEST_LABEL[kind]}
+                    </p>
+                    <button onClick={() => setChest(null)} className="mc-btn min-h-10 px-4 font-pixel text-[9px]">Collect</button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setChest((c) => c && { ...c, open: true })}
+                    aria-label={`Open ${CHEST_LABEL[kind]}`}
+                    className="grid place-items-center animate-bounce"
+                  >
+                    <PixelChest kind={kind} size={96} />
+                  </button>
+                )}
+                {!chest.open && <p className="font-pixel text-[8px] text-parchment/70">Tap to open</p>}
+              </div>
+            </div>
+          );
+        })()}
 
       {disc && (
         <button
@@ -684,10 +698,19 @@ export function ExplorerMap() {
                 {loot.length ? (
                   <div className="flex flex-wrap gap-1">
                     {loot.map((it, n) => (
-                      <span key={n} title={`${it.name} (${it.rarity}) — ${it.from}`} className={`slot-panel px-1.5 py-1 font-pixel text-[8px] ${RARITY_CLASS[it.rarity]}`}>{it.emoji} {it.name}</span>
+                      <span key={n} title={`${it.name} (${it.rarity}) — ${it.from}`} className={`slot-panel inline-flex items-center gap-1 px-1.5 py-1 font-pixel text-[8px] ${RARITY_CLASS[it.rarity]}`}>
+                        <PixelChest kind={CHEST_FOR[it.rarity]} size={12} /> {it.emoji} {it.name}
+                      </span>
                     ))}
                   </div>
                 ) : <p className="font-pixel text-[8px] leading-4 text-parchment/60">Discover buildings to open loot chests.</p>}
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {CHEST_ORDER.map((k) => (
+                    <span key={k} className="inline-flex items-center gap-1 font-pixel text-[8px] text-parchment/70">
+                      <PixelChest kind={k} size={14} /> {CHEST_LABEL[k]}
+                    </span>
+                  ))}
+                </div>
               </div>
             {/* category legend: colour-coded pixel badges */}
             <div className="flex flex-col gap-2">

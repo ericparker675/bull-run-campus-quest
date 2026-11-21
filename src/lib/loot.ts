@@ -39,3 +39,23 @@ export function rollLoot(rand: () => number = Math.random) {
   const item = pool[Math.floor(rand() * pool.length)] ?? pool[0]!;
   return { ...item, rarity };
 }
+
+/** The three chest looks, easiest to find first. */
+export type ChestKind = "wooden" | "shulker" | "ender";
+
+/** Which chest each rarity drops: wooden chest (common/rare), shulker box (epic), ender chest (legendary). */
+export const CHEST_FOR: Record<Rarity, ChestKind> = {
+  common: "wooden",
+  rare: "wooden",
+  epic: "shulker",
+  legendary: "ender",
+};
+
+export const CHEST_LABEL: Record<ChestKind, string> = {
+  wooden: "Wooden Chest",
+  shulker: "Shulker Box",
+  ender: "Ender Chest",
+};
+
+/** Chests ordered from most common drop to rarest. */
+export const CHEST_ORDER: ChestKind[] = ["wooden", "shulker", "ender"];

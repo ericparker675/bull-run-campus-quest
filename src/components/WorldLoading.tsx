@@ -12,7 +12,12 @@ export function WorldLoading() {
   const [pct, setPct] = useState(0);
   const [fading, setFading] = useState(false);
   const [gone, setGone] = useState(false);
-  const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
+  const [tipIdx, setTipIdx] = useState(0);
+
+  // Picked after mount so the server-rendered text always matches the client's.
+  useEffect(() => {
+    setTipIdx(Math.floor(Math.random() * TIPS.length));
+  }, []);
 
   useEffect(() => {
     const start = performance.now();
@@ -62,7 +67,7 @@ export function WorldLoading() {
         })}
       </div>
       <p className="font-pixel absolute bottom-4 left-4 right-4 text-[10px] leading-relaxed text-[--mc-white] sm:text-xs">
-        <span className="text-[--mc-cyan]">Tip:</span> {tip}
+        <span className="text-[--mc-cyan]">Tip:</span> {TIPS[tipIdx] ?? TIPS[0]}
       </p>
     </div>
   );
