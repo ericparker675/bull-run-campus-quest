@@ -345,7 +345,9 @@ export function ExplorerMap() {
       ctx.font = `${10 * dpr}px 'Press Start 2P', monospace`;
       const tw = ctx.measureText(lm.code).width;
       ctx.fillStyle = ink; ctx.fillRect(p.x - tw / 2 - 4 * dpr, p.y - 30 * dpr, tw + 8 * dpr, 18 * dpr);
-      ctx.fillStyle = done ? col : fog; ctx.fillText(lm.code, p.x, p.y - 16 * dpr);
+      ctx.globalAlpha = done ? 1 : 0.6;
+      ctx.fillStyle = col; ctx.fillText(lm.code, p.x, p.y - 16 * dpr);
+      ctx.globalAlpha = 1;
     }
     // player: white pointer like minecraft
     if (pos) {
@@ -435,7 +437,7 @@ export function ExplorerMap() {
           return (
             <div key={c} className={`slot-panel flex items-center gap-2 px-2 py-1 font-pixel text-[8px] ${BADGE_TEXT[c]}`}>
               <span className="inline-block h-3 w-3 border-2 border-ink" style={{ background: `var(${m.cssVar})` }} aria-hidden />
-              <span className="text-parchment">{m.emoji} {m.label} {got}/{inCat.length}</span>
+              <span>{m.emoji} {m.label} {got}/{inCat.length}</span>
             </div>
           );
         })}
@@ -452,7 +454,7 @@ export function ExplorerMap() {
               disabled={!done}
               onClick={() => setPopup({ lm, text: found[lm.id] ?? "", loading: false, ...(found[lm.id] ? {} : { error: "No facts saved for this one." }) })}
               style={done ? { borderColor: `var(${CATEGORY_META[lm.category].cssVar})` } : undefined}
-              className={`hotbar-slot font-pixel text-[9px] ${done ? BADGE_TEXT[lm.category] : "text-parchment/40"}`}
+              className={`hotbar-slot font-pixel text-[9px] ${BADGE_TEXT[lm.category]} ${done ? "" : "opacity-40"}`}
             >
               {done ? lm.code : "?"}
             </button>
