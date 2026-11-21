@@ -244,7 +244,7 @@ export function ExplorerMap() {
       campus: css.getPropertyValue("--badge-campus").trim(),
     };
 
-    const SCALE = Math.min(W / (SE.x - NW.x), H / (SE.y - NW.y)) * zoom;
+    const SCALE = Math.max(W / (SE.x - NW.x), H / (SE.y - NW.y)) * zoom;
     // Zoomed in: follow the player, but keep the view inside the campus.
     const focus = pos ? project(pos.lat, pos.lng) : { x: (NW.x + SE.x) / 2, y: (NW.y + SE.y) / 2 };
     const halfW = W / 2 / SCALE, halfH = H / 2 / SCALE;
