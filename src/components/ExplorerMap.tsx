@@ -77,8 +77,40 @@ export function ExplorerMap() {
       const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
       setZoom((z) => clampZoom(z * Math.exp(-dy * 0.002)));
     };
+    // Two-finger pinch zoom on touch screens.
+    const pts = new Map<number, { x: number; y: number }>();
+    let lastDist = 0;
+    const dist = () => {
+      const [a, b] = [...pts.values()];
+      return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+    };
+    const onDown = (e: PointerEvent) => {
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 2) lastDist = dist();
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 2 && lastDist > 0) {
+        const d = dist();
+        const k = d / lastDist;
+        lastDist = d;
+        setZoom((z) => clampZoom(z * k));
+      }
+    };
+    const onUp = (e: PointerEvent) => { pts.delete(e.pointerId); lastDist = 0; };
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+    el.addEventListener("pointerdown", onDown);
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerup", onUp);
+    el.addEventListener("pointercancel", onUp);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", onUp);
+      el.removeEventListener("pointercancel", onUp);
+    };
   }, []);
   const [toast, setToast] = useState<string | null>(null);
   const loaded = useRef(false);
@@ -271,7 +303,7 @@ export function ExplorerMap() {
       </header>
 
       <div className="map-frame relative aspect-[4/5] w-full max-w-3xl sm:aspect-[4/3]">
-        <canvas ref={canvasRef} className="h-full w-full" aria-label="Explored campus map" />
+        <canvas ref={canvasRef} className="h-full w-full touch-none" aria-label="Explored campus map" />
         {!pos && (
           <div className="absolute inset-0 grid place-items-center p-6 text-center font-pixel text-xs text-ink">
             {gpsMsg}
@@ -280,9 +312,9 @@ export function ExplorerMap() {
         {pos && gpsMsg && mode === "gps" && (
           <div className="absolute left-2 top-2 bg-ink px-2 py-1 font-pixel text-[9px] text-parchment">{gpsMsg}</div>
         )}
-        <div className="absolute bottom-3 right-3 flex flex-col gap-1">
-          <button className="mc-btn h-9 w-9 font-pixel text-xs" aria-label="Zoom in" onClick={() => setZoom((z) => clampZoom(z * 1.5))}>+</button>
-          <button className="mc-btn h-9 w-9 font-pixel text-xs" aria-label="Zoom out" onClick={() => setZoom((z) => clampZoom(z / 1.5))}>−</button>
+        <div className="absolute right-3 top-3 z-10 flex flex-col gap-2">
+          <button className="mc-btn h-12 w-12 font-pixel text-base" aria-label="Zoom in" onClick={() => setZoom((z) => clampZoom(z * 1.5))}>+</button>
+          <button className="mc-btn h-12 w-12 font-pixel text-base" aria-label="Zoom out" onClick={() => setZoom((z) => clampZoom(z / 1.5))}>−</button>
         </div>
         {toast && (
           <div className="absolute inset-x-0 top-3 mx-auto w-fit slot-panel px-4 py-3 animate-in fade-in slide-in-from-top-4">
@@ -297,7 +329,7 @@ export function ExplorerMap() {
                 <p className="font-pixel text-[10px] text-gold">New landmark discovered!</p>
                 <p className="mt-2 font-pixel text-xs text-parchment">{popup.lm.name}</p>
               </div>
-              <button onClick={() => setPopup(null)} className="mc-btn px-2 py-1 font-pixel text-[10px]">X</button>
+              <button onClick={() => setPopup(null)} className="mc-btn h-10 w-10 shrink-0 font-pixel text-[10px]" aria-label="Close">X</button>
             </div>
             <p className="mt-3 text-xl leading-tight text-parchment">
               {popup.loading ? "Consulting the campus guide…" : popup.error ?? popup.text}
@@ -306,6 +338,23 @@ export function ExplorerMap() {
         )}
       </div>
 
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <button onClick={() => setMode(mode === "gps" ? "demo" : "gps")} className="mc-btn min-h-12 px-4 py-3 font-pixel text-[10px]">
+          {mode === "gps" ? "Demo walk" : "Use my location"}
+        </button>
+        {mode === "demo" && (
+          <div className="grid grid-cols-3 gap-2">
+            <span /><button className="mc-btn h-14 w-14 text-xl" onClick={() => step(0, -1)} aria-label="North">▲</button><span />
+            <button className="mc-btn h-14 w-14 text-xl" onClick={() => step(-1, 0)} aria-label="West">◀</button>
+            <button className="mc-btn h-14 w-14 text-xl" onClick={() => step(0, 1)} aria-label="South">▼</button>
+            <button className="mc-btn h-14 w-14 text-xl" onClick={() => step(1, 0)} aria-label="East">▶</button>
+          </div>
+        )}
+        <button
+          onClick={() => { if (confirm("Erase your explored map?")) { setCells(new Set()); setFound({}); setAchv([]); } }}
+          className="mc-btn min-h-12 px-4 py-3 font-pixel text-[10px]"
+        >Reset map</button>
+      </div>
       {/* hotbar of landmarks */}
       <div className="flex w-full max-w-3xl flex-wrap justify-center gap-1">
         {LANDMARKS.map((lm) => {
@@ -335,23 +384,6 @@ export function ExplorerMap() {
         })}
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <button onClick={() => setMode(mode === "gps" ? "demo" : "gps")} className="mc-btn px-4 py-2 font-pixel text-[10px]">
-          {mode === "gps" ? "Demo walk" : "Use my location"}
-        </button>
-        {mode === "demo" && (
-          <div className="grid grid-cols-3 gap-1">
-            <span /><button className="mc-btn h-9 w-9" onClick={() => step(0, -1)} aria-label="North">▲</button><span />
-            <button className="mc-btn h-9 w-9" onClick={() => step(-1, 0)} aria-label="West">◀</button>
-            <button className="mc-btn h-9 w-9" onClick={() => step(0, 1)} aria-label="South">▼</button>
-            <button className="mc-btn h-9 w-9" onClick={() => step(1, 0)} aria-label="East">▶</button>
-          </div>
-        )}
-        <button
-          onClick={() => { if (confirm("Erase your explored map?")) { setCells(new Set()); setFound({}); setAchv([]); } }}
-          className="mc-btn px-4 py-2 font-pixel text-[10px]"
-        >Reset map</button>
-      </div>
       <p className="max-w-md text-center text-lg text-muted-foreground">
         Walk around USF to uncover the map. Get close to a building to discover it. {mode === "demo" && "Use arrow keys / WASD."}
       </p>
