@@ -1,3 +1,5 @@
+import bullDance from "@/assets/bull-breakdance.gif.asset.json";
+import { rockySpot, todayKey, ROCKY_FIND_RADIUS_M } from "@/lib/rocky";
 import playerIcon from "@/assets/player-icon.png.asset.json";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { LANDMARKS, CAMPUS_CENTER, CAMPUS_BOUNDS, ACHIEVEMENTS, newlyEarned, dropsLoot, DISCOVER_RADIUS_M, CATEGORY_META, CATEGORY_ORDER, type Category } from "@/lib/landmarks";
@@ -74,6 +76,25 @@ export function ExplorerMap({ initialMode = "gps", initialDrawer = null }: { ini
   const [finder, setFinder] = useState(false);
   const [query, setQuery] = useState("");
   const [phase, setPhase] = useState(0);
+  const [day, setDay] = useState<string | null>(null);
+  const [rockyFound, setRockyFound] = useState(false);
+  const rockyRef = useRef<HTMLImageElement>(null);
+  const rocky = day ? rockySpot(day) : null;
+  useEffect(() => {
+    const d = todayKey();
+    setDay(d);
+    setRockyFound(localStorage.getItem("rocky-found") === d);
+  }, []);
+  useEffect(() => {
+    if (!pos || !rocky || !day || rockyFound) return;
+    if (distM(pos, rocky) < ROCKY_FIND_RADIUS_M) {
+      setRockyFound(true);
+      localStorage.setItem("rocky-found", day);
+      setDisc({ name: "You found Rocky D. Bull! Come back tomorrow.", emoji: "🐂", cssVar: "--gold" });
+      if (discTimer.current) clearTimeout(discTimer.current);
+      discTimer.current = setTimeout(() => setDisc(null), 4500);
+    }
+  }, [pos, day, rockyFound]); // eslint-disable-line react-hooks/exhaustive-deps
   const pins = useRef<{ id: string; x: number; y: number }[]>([]);
   const hitPin = (cx: number, cy: number) => {
     const c = canvasRef.current; if (!c) return null;
@@ -445,6 +466,18 @@ export function ExplorerMap({ initialMode = "gps", initialDrawer = null }: { ini
       ctx.fillStyle = ink; ctx.fillRect(lx - tw / 2 - 4 * dpr, p.y - 30 * dpr, tw + 8 * dpr, 16 * dpr);
       ctx.fillStyle = badge[lm.category] || gold; ctx.fillText(lm.name, lx, p.y - 18 * dpr);
     }
+    // Rocky: hidden in the fog until that spot is explored (or the map is revealed)
+    const ri = rockyRef.current;
+    if (ri) {
+      if (rocky) {
+        const rw = project(rocky.lat, rocky.lng);
+        const rk = `${Math.floor(rw.x / CELL)},${Math.floor(rw.y / CELL)}`;
+        const rp = toScreen(rocky.lat, rocky.lng);
+        ri.style.display = showAll || rockyFound || cells.has(rk) ? "block" : "none";
+        ri.style.left = `${rp.x / dpr}px`;
+        ri.style.top = `${rp.y / dpr}px`;
+      } else ri.style.display = "none";
+    }
     const out = 7 * dpr, inn = 4 * dpr;
     // player: white pointer like minecraft
     if (pos) {
@@ -462,7 +495,7 @@ export function ExplorerMap({ initialMode = "gps", initialDrawer = null }: { ini
         ctx.fillStyle = marker; ctx.fillRect(p.x - inn - dpr, p.y - inn - dpr, (inn + dpr) * 2, (inn + dpr) * 2);
       }
     }
-  }, [pos, cells, found, tick, zoom, showAll, heading, pan, waypoint, labelId, phase]);
+  }, [pos, cells, found, tick, zoom, showAll, heading, pan, waypoint, labelId, phase, day, rockyFound]);
 
   const count = Object.keys(found).length;
   const wpLm = LANDMARKS.find((l) => l.id === waypoint) ?? null;
@@ -479,6 +512,7 @@ export function ExplorerMap({ initialMode = "gps", initialDrawer = null }: { ini
       {/* full-screen map inside the torn paper border */}
       <div className="map-frame absolute inset-[8px]">
         <canvas ref={canvasRef} className="h-full w-full touch-none" aria-label="Explored campus map" />
+        <img ref={rockyRef} src={bullDance.url} alt="Rocky D. Bull" className="pointer-events-none absolute z-10 hidden h-12 w-12 -translate-x-1/2 -translate-y-1/2 [image-rendering:pixelated]" />
         {!pos && (
           <div className="absolute inset-0 grid place-items-center px-[18%] text-center font-pixel text-xs leading-relaxed text-ink">
             {gpsMsg}
@@ -497,13 +531,13 @@ export function ExplorerMap({ initialMode = "gps", initialDrawer = null }: { ini
       </header>
 
       {pos && gpsMsg && mode === "gps" && (
-        <div className="absolute left-1/2 top-[calc(max(3%,14px)+52px)] z-30 w-[min(80vw,520px)] -translate-x-1/2 bg-ink px-2 py-1 text-center font-pixel text-[9px] leading-relaxed text-parchment">
+        <div className="absolute left-1/2 top-[calc(max(3%,14px)+104px)] z-30 w-[min(80vw,520px)] -translate-x-1/2 bg-ink px-2 py-1 text-center font-pixel text-[9px] leading-relaxed text-parchment">
           {gpsMsg}
         </div>
       )}
 
       {wpLm && (
-        <div className={`slot-panel absolute left-1/2 top-[calc(max(3%,14px)+48px)] z-30 flex w-[min(86vw,560px)] -translate-x-1/2 items-center gap-3 px-3 py-2 ${drawer ? "sm:ml-36" : ""}`}>
+        <div className={`slot-panel absolute left-1/2 top-[calc(max(3%,14px)+104px)] z-30 flex w-[min(86vw,560px)] -translate-x-1/2 items-center gap-3 px-3 py-2 ${drawer ? "sm:ml-36" : ""}`}>
           <div className="compass relative h-10 w-10 shrink-0" aria-hidden>
             <div className="compass-needle absolute inset-0" style={{ transform: `rotate(${wpBearing}deg)` }}>
               <span className="absolute left-1/2 top-[6px] h-[14px] w-[4px] -translate-x-1/2 bg-destructive" />
@@ -610,6 +644,19 @@ export function ExplorerMap({ initialMode = "gps", initialDrawer = null }: { ini
             <span className="mt-1 block font-pixel text-[9px] leading-4 text-parchment">{disc.name}</span>
           </span>
         </button>
+      )}
+
+      {/* Rocky daily hunt status */}
+      {rocky && (
+        <div className="slot-panel absolute left-[max(7%,22px)] top-[calc(max(3%,14px)+52px)] z-30 flex items-center gap-2 px-2 py-1.5">
+          <img src={bullDance.url} alt="" className="h-7 w-7 [image-rendering:pixelated]" />
+          <div className="font-pixel text-[8px] leading-4">
+            <div className={rockyFound ? "text-badge-eco" : "text-gold"}>{rockyFound ? "Rocky found!" : "Find Rocky"}</div>
+            <div className="text-parchment">
+              {rockyFound ? "See you tomorrow" : pos ? (() => { const d = distM(pos, rocky); return d < 1000 ? `${Math.round(d)}m away` : `${(d / 1000).toFixed(1)}km away`; })() : "No location"}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* floating bottom controls */}
