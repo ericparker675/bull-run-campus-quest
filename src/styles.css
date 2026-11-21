@@ -104,6 +104,10 @@
   --ink: oklch(0.25 0.03 60);
   --marker: oklch(0.99 0 0);
   --gold: oklch(0.82 0.16 85);
+  --badge-safety: oklch(0.62 0.19 250);
+  --badge-eco: oklch(0.72 0.19 150);
+  --badge-essentials: oklch(0.82 0.16 85);
+  --badge-campus: oklch(0.66 0.02 60);
   --frame: oklch(0.72 0.08 75);
   --stone: oklch(0.55 0.005 0);
   --slot: oklch(0.3 0.01 60 / 0.85);
@@ -114,6 +118,10 @@
   --color-parchment: var(--parchment);
   --color-ink: var(--ink);
   --color-gold: var(--gold);
+  --color-badge-safety: var(--badge-safety);
+  --color-badge-eco: var(--badge-eco);
+  --color-badge-essentials: var(--badge-essentials);
+  --color-badge-campus: var(--badge-campus);
   --font-pixel: "Press Start 2P", monospace;
   --font-sans: "VT323", monospace;
 }

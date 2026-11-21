@@ -1,31 +1,19 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { LANDMARKS, CAMPUS_CENTER, CAMPUS_BOUNDS, ACHIEVEMENTS, newlyEarned, DISCOVER_RADIUS_M, type Landmark } from "@/lib/landmarks";
+import { LANDMARKS, CAMPUS_CENTER, CAMPUS_BOUNDS, ACHIEVEMENTS, newlyEarned, DISCOVER_RADIUS_M, CATEGORY_META, CATEGORY_ORDER, type Landmark, type Category } from "@/lib/landmarks";
 import { describeLandmark } from "@/lib/discover.functions";
+import { Z, project, unproject, distM, clampToCampus } from "@/lib/geo";
 
-const Z = 17;
 const CELL = 8; // world px per fog cell (~8.5m)
 const REVEAL_PX = 70; // reveal radius in world px (~74m)
 const STORE = "usf-explorer-v1";
 
-function project(lat: number, lng: number) {
-  const n = 256 * 2 ** Z;
-  const x = ((lng + 180) / 360) * n;
-  const s = Math.sin((lat * Math.PI) / 180);
-  const y = (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n;
-  return { x, y };
-}
-function unproject(x: number, y: number) {
-  const n = 256 * 2 ** Z;
-  const lng = (x / n) * 360 - 180;
-  const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / n))) * 180) / Math.PI;
-  return { lat, lng };
-}
-function distM(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
-  const R = 6371000, r = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
+// Static class strings so Tailwind generates them.
+const BADGE_TEXT: Record<Category, string> = {
+  safety: "text-badge-safety",
+  eco: "text-badge-eco",
+  essentials: "text-badge-essentials",
+  campus: "text-badge-campus",
+};
 
 const NW = project(CAMPUS_BOUNDS.north, CAMPUS_BOUNDS.west);
 const SE = project(CAMPUS_BOUNDS.south, CAMPUS_BOUNDS.east);
@@ -145,9 +133,10 @@ export function ExplorerMap() {
     if (!("geolocation" in navigator)) { setGpsMsg("Location not supported — try demo walk."); return; }
     const id = navigator.geolocation.watchPosition(
       (p) => {
-        const here = { lat: p.coords.latitude, lng: p.coords.longitude };
-        setPos(here);
-        setGpsMsg(distM(here, CAMPUS_CENTER) > 3000 ? "You're far from USF — try demo walk." : "");
+        const raw = { lat: p.coords.latitude, lng: p.coords.longitude };
+        setGpsMsg(distM(raw, CAMPUS_CENTER) > 3000 ? "You're far from USF — try demo walk." : "");
+        // Never let the marker leave the map, even if the GPS fix is off campus.
+        setPos(clampToCampus(raw));
       },
       () => setGpsMsg("Location blocked — allow it, or try demo walk."),
       { enableHighAccuracy: true, maximumAge: 2000 },
@@ -158,7 +147,7 @@ export function ExplorerMap() {
   // Demo walk with keys
   useEffect(() => {
     if (mode !== "demo") return;
-    setPos((p) => p && distM(p, CAMPUS_CENTER) < 3000 ? p : CAMPUS_CENTER);
+    setPos((p) => (p && distM(p, CAMPUS_CENTER) < 3000 ? clampToCampus(p) : CAMPUS_CENTER));
     const onKey = (e: KeyboardEvent) => {
       const d: Record<string, [number, number]> = {
         ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1],
@@ -177,7 +166,8 @@ export function ExplorerMap() {
     setPos((p) => {
       if (!p) return p;
       const w = project(p.lat, p.lng);
-      return unproject(w.x + dx * 12, w.y + dy * 12);
+      // Stop at the map edge instead of walking off it.
+      return clampToCampus(unproject(w.x + dx * 12, w.y + dy * 12));
     });
   }, []);
 
@@ -198,14 +188,17 @@ export function ExplorerMap() {
     });
     for (const lm of LANDMARKS) {
       if (found[lm.id] === undefined && distM(pos, lm) < DISCOVER_RADIUS_M) {
-        setFound((f) => ({ ...f, [lm.id]: "" }));
-        setPopup({ lm, text: "", loading: true });
+        // Curated facts (safety / eco / essentials) show instantly; Claude adds the rest.
+        const seed = lm.fact ?? "";
+        setFound((f) => ({ ...f, [lm.id]: seed }));
+        setPopup({ lm, text: seed, loading: !seed });
         describeLandmark({ data: { name: lm.name, code: lm.code } })
           .then((r) => {
-            setFound((f) => ({ ...f, [lm.id]: r.text }));
-            setPopup((p) => p?.lm.id === lm.id ? { lm, text: r.text, loading: false, ...(r.error ? { error: r.error } : {}) } : p);
+            const text = seed && r.text ? `${seed}\n\n${r.text}` : seed || r.text;
+            setFound((f) => ({ ...f, [lm.id]: text }));
+            setPopup((p) => p?.lm.id === lm.id ? { lm, text, loading: false, ...(r.error && !seed ? { error: r.error } : {}) } : p);
           })
-          .catch(() => setPopup((p) => p?.lm.id === lm.id ? { lm, text: "", loading: false, error: "Couldn't fetch building facts right now." } : p));
+          .catch(() => setPopup((p) => p?.lm.id === lm.id ? { ...p, loading: false, ...(seed ? {} : { error: "Couldn't fetch building facts right now." }) } : p));
       }
     }
   }, [pos]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -225,6 +218,12 @@ export function ExplorerMap() {
     const ink = css.getPropertyValue("--ink").trim();
     const marker = css.getPropertyValue("--marker").trim();
     const gold = css.getPropertyValue("--gold").trim();
+    const badge: Record<Category, string> = {
+      safety: css.getPropertyValue("--badge-safety").trim(),
+      eco: css.getPropertyValue("--badge-eco").trim(),
+      essentials: css.getPropertyValue("--badge-essentials").trim(),
+      campus: css.getPropertyValue("--badge-campus").trim(),
+    };
 
     const SCALE = Math.min(W / (SE.x - NW.x), H / (SE.y - NW.y)) * zoom;
     // Zoomed in: follow the player, but keep the view inside the campus.
@@ -336,12 +335,15 @@ export function ExplorerMap() {
       const k = `${Math.floor(project(lm.lat, lm.lng).x / CELL)},${Math.floor(project(lm.lat, lm.lng).y / CELL)}`;
       if (!cells.has(k)) continue;
       const done = found[lm.id] !== undefined;
+      const col = badge[lm.category] || gold;
       ctx.fillStyle = ink; ctx.fillRect(p.x - out, p.y - out, out * 2, out * 2);
-      ctx.fillStyle = done ? gold : fog; ctx.fillRect(p.x - inn, p.y - inn, inn * 2, inn * 2);
+      ctx.globalAlpha = done ? 1 : 0.45;
+      ctx.fillStyle = col; ctx.fillRect(p.x - inn, p.y - inn, inn * 2, inn * 2);
+      ctx.globalAlpha = 1;
       ctx.font = `${10 * dpr}px 'Press Start 2P', monospace`;
       const tw = ctx.measureText(lm.code).width;
       ctx.fillStyle = ink; ctx.fillRect(p.x - tw / 2 - 4 * dpr, p.y - 30 * dpr, tw + 8 * dpr, 18 * dpr);
-      ctx.fillStyle = done ? gold : fog; ctx.fillText(lm.code, p.x, p.y - 16 * dpr);
+      ctx.fillStyle = done ? col : fog; ctx.fillText(lm.code, p.x, p.y - 16 * dpr);
     }
     // player: white pointer like minecraft
     if (pos) {
@@ -392,7 +394,7 @@ export function ExplorerMap() {
               </div>
               <button onClick={() => setPopup(null)} className="mc-btn h-10 w-10 shrink-0 font-pixel text-[10px]" aria-label="Close">X</button>
             </div>
-            <p className="mt-3 text-xl leading-tight text-parchment">
+            <p className="mt-3 whitespace-pre-line text-xl leading-tight text-parchment">
               {popup.loading ? "Consulting the campus guide…" : popup.error ?? popup.text}
             </p>
           </div>
@@ -418,6 +420,21 @@ export function ExplorerMap() {
           className="mc-btn min-h-12 px-4 py-3 font-pixel text-[10px]"
         >Reset map</button>
       </div>
+      {/* category legend: colour-coded pixel badges */}
+      <div className="flex w-full max-w-3xl flex-wrap justify-center gap-2">
+        {CATEGORY_ORDER.map((c) => {
+          const m = CATEGORY_META[c];
+          const inCat = LANDMARKS.filter((l) => l.category === c);
+          const got = inCat.filter((l) => found[l.id] !== undefined).length;
+          return (
+            <div key={c} className={`slot-panel flex items-center gap-2 px-2 py-1 font-pixel text-[8px] ${BADGE_TEXT[c]}`}>
+              <span className="inline-block h-3 w-3 border-2 border-ink" style={{ background: `var(${m.cssVar})` }} aria-hidden />
+              <span className="text-parchment">{m.emoji} {m.label} {got}/{inCat.length}</span>
+            </div>
+          );
+        })}
+      </div>
+
       {/* hotbar of landmarks */}
       <div className="flex w-full max-w-3xl flex-wrap justify-center gap-1">
         {LANDMARKS.map((lm) => {
@@ -428,7 +445,8 @@ export function ExplorerMap() {
               title={done ? lm.name : "Not yet discovered"}
               disabled={!done}
               onClick={() => setPopup({ lm, text: found[lm.id] ?? "", loading: false, ...(found[lm.id] ? {} : { error: "No facts saved for this one." }) })}
-              className={`hotbar-slot font-pixel text-[9px] ${done ? "text-gold" : "text-parchment/40"}`}
+              style={done ? { borderColor: `var(${CATEGORY_META[lm.category].cssVar})` } : undefined}
+              className={`hotbar-slot font-pixel text-[9px] ${done ? BADGE_TEXT[lm.category] : "text-parchment/40"}`}
             >
               {done ? lm.code : "?"}
             </button>
