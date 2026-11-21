@@ -429,7 +429,7 @@ export function ExplorerMap() {
         >Reset map</button>
       </div>
       {/* left-side curtain: legend, landmark hotbar, achievements */}
-      <div className="fixed left-0 top-1/2 z-40 flex -translate-y-1/2 items-start">
+      <div className="fixed left-0 top-24 z-40 flex items-start">
         <div
           className={`max-h-[85vh] w-64 overflow-y-auto transition-transform duration-300 ease-out sm:w-72 ${
             drawerOpen ? "translate-x-0" : "-translate-x-full"
@@ -489,7 +489,7 @@ export function ExplorerMap() {
           onClick={() => setDrawerOpen((o) => !o)}
           aria-expanded={drawerOpen}
           aria-label={drawerOpen ? "Close progress panel" : "Open progress panel"}
-          className="mc-btn mt-24 flex h-24 w-10 items-center justify-center rounded-l-none font-pixel text-[10px]"
+          className="mc-btn mt-2 flex h-16 w-10 items-center justify-center rounded-l-none font-pixel text-[10px]"
         >
           {drawerOpen ? "◀" : "🏆"}
         </button>
