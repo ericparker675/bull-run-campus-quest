@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import bullDance from "@/assets/bull-breakdance.gif.asset.json";
 
 const SPLASHES = ["Go Bulls!", "813!", "Find Blue Lights!", "Nerf This!"];
 
@@ -17,11 +16,6 @@ export function TitleScreen({ onChoose }: { onChoose: (c: TitleChoice) => void }
       <div className="relative mt-[12vh] px-4 text-center">
         <h1 className="mc-logo font-pixel text-3xl leading-tight sm:text-6xl">USF<br />EXPLORER</h1>
         <p className="font-pixel mt-4 inline-block border-2 border-[#000] bg-[#3a3a3a]/80 px-3 py-1.5 text-[9px] tracking-widest text-[--mc-white] sm:text-xs">TAMPA CAMPUS EDITION</p>
-        <img
-          src={bullDance.url}
-          alt="Rocky the Bull breakdancing"
-          className="mx-auto mt-3 h-24 [image-rendering:pixelated] sm:h-32"
-        />
         <span key={i} className="mc-splash font-pixel absolute -right-4 top-6 whitespace-nowrap text-[11px] sm:-right-16 sm:top-10 sm:text-base">{SPLASHES[i]}</span>
       </div>
       <nav className="my-auto flex w-[280px] flex-col gap-2 sm:w-[360px]" aria-label="Main menu">
